@@ -1,47 +1,44 @@
 import sys, os
-from PIL import Image
-from src.preprocessing.image_cropper import crop_image_with_polygon
-from src.preprocessing.preprocessing import splitting_broker
+from src.core.core_model import State
+from src.preprocessing.preprocessing import Preprocessor
+from src.segmentation.evaluator import MaskFeaturing
 from src.segmentation.sam_segmentation import Segmenter
 from src.utils.configuration import Configuration
+from src.utils.metautils import FileCleaner
+
+def build(conf: Configuration):
+    # Cleaning
+    cleaner = FileCleaner()
+    cleaner.clean()
+    # Starting
+    images = State(configuration)
+    for image_filename in images.get_base_images():
+        # Preprocessing
+        image_name = os.path.basename(image_filename).split('.')[0]
+        image = images.get_original(image_name)
+        preprocessor = Preprocessor(conf)
+        faint_image = preprocessor.execute(image)
+        images.add_preprocessed(image_name,faint_image)
+        # Segmentation
+        segmenter = Segmenter()
+        f = MaskFeaturing()
+        masks = segmenter.mask_generation(faint_image)
+        masks = list(filter(lambda x: f.filter(x), masks))
+        images.add_masks(image_name,masks)
+    images.save_pickle()
+    pass
+
+def progress(conf: Configuration):
+    images = State(conf)
+    images.load_pickle()
+    pass
+
+functions = {
+    'build': build,
+    'progress': progress
+}
 
 if __name__ == '__main__':
     configuration = Configuration(sys.argv[1])
-    input_dir = configuration.get('imagefolder')
-    image_type = configuration.get('imagetype')
-    filenames = list(os.listdir(input_dir))
-    filenames = list(filter(lambda x: x.lower().endswith((image_type)), filenames))
-    images = {}
-    for filename in filenames:
-        # Preliminaries
-        image_path = os.path.join(input_dir, filename)
-        image_name = os.path.basename(image_path).split('.')[0]
-        images[image_name] = {}
-        image = Image.open(image_path)
-        images[image_name]['original'] = image
-        # Cropping
-        cropped_image = crop_image_with_polygon(image, image_name)
-        images[image_name]['cropped'] = cropped_image
-        # Splitting
-        channels = configuration.get('channels')
-        for channel in channels:
-            function = splitting_broker[channel]
-            splitted = function(cropped_image, image_name)
-            images[image_name][channel] = splitted
-        # Segmentation
-        masks = list()
-        segmenter = Segmenter()
-        for channel in channels:
-            base = images[image_name][channel]
-            mask = segmenter.mask_generation(base, image_name, channel)
-            masks.append(mask)
-        final_mask = Segmenter.mask_voting(masks)
-
-
-
-
-
-
-
-
-
+    command = functions[sys.argv[2]]
+    command(configuration)
