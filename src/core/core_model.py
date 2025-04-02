@@ -2,7 +2,7 @@ import os
 from PIL import Image
 import cv2, numpy as np
 import pickle
-from src.utils.metautils import cv2_to_pil, pil_to_cv2
+from src.utils.utils import cv2_to_pil, pil_to_cv2
 
 class State:
     def __init__(self, conf):
@@ -10,7 +10,10 @@ class State:
         self.filetype = conf.get('imagetype')
         self.preprocessed_directory = conf.get('preprocessedfolder')
         self.mask_directory = conf.get("maskfolder")
-        self.pickle = conf.get('pickle_filename')
+        self.pickle = conf.get('picklefolder')
+        self.clean()
+
+    def clean(self):
         filenames = list(os.listdir(self.input_directory))
         filenames = list(filter(lambda x: x.lower().endswith((self.filetype)), filenames))
         self.images = dict()
@@ -41,6 +44,9 @@ class State:
             else:
                 blended = overlay
         return blended
+
+    def remove(self, image_name: str):
+        del self.images[image_name]
 
     def get_base_images(self):
         return list(self.images.keys())
@@ -76,10 +82,19 @@ class State:
         image.save(output_path)
         print(f"Immagine salvata: {output_path}")
 
-    def save_pickle(self):
-        with open(self.pickle, "wb") as f:
-            pickle.dump(self.images, f)
+    def save_pickle(self, image_name):
+        filename = f'{image_name}.pickle'
+        output_path = os.path.join(self.pickle,filename)
+        with open(output_path, "wb") as f:
+            pickle.dump(self.images[image_name], f)
 
     def load_pickle(self):
-        with open(self.pickle, "rb") as f:
-            self.images = pickle.load(f)
+        self.images = dict()
+        filenames = list(os.listdir(self.pickle))
+        for filename in filenames:
+            image_name = os.path.splitext(filename)[0]
+            input_path = os.path.join(self.pickle, filename)
+            with open(input_path, "rb") as f:
+                temp = pickle.load(f)
+                self.images[image_name] = {**self.images, **temp}
+

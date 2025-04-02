@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 from src.utils.configuration import Configuration
-from src.utils.metautils import adjust_coordinate_rectangle
+from src.utils.utils import adjust_coordinate_rectangle
 
 def haversine(p1, p2):
     R = 6371000  # Earth radius in meters

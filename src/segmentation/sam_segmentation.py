@@ -6,7 +6,7 @@ from src.segmentation.evaluator import MaskFeaturing
 from src.utils.configuration import Configuration
 import gc
 
-from src.utils.metautils import pil_to_cv2
+from src.utils.utils import pil_to_cv2
 
 
 class Segmenter:

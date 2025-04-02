@@ -1,10 +1,6 @@
 from src.utils.configuration import Configuration
-import shutil
-import os
-import numpy as np
-import cv2
+import shutil, os, getpass, socket, numpy as np, cv2, requests
 from PIL import Image
-
 
 def leq(a: float, b: float) -> bool:
     return a <= b
@@ -29,6 +25,18 @@ def adjust_coordinate_rectangle(points):
     x_min, x_max = min(x_coords), max(x_coords)
     y_min, y_max = min(y_coords), max(y_coords)
     return x_min, x_max, y_min, y_max
+
+def send_ntfy_notification(topic):
+    url = f"https://ntfy.sh/{topic}"
+    username = getpass.getuser()
+    hostname = socket.gethostname()
+    project = "sud4vup"
+    message = f"{project}: execution completed by {username} on {hostname}!!"
+    response = requests.post(url, data=message.encode('utf-8'))
+    if response.status_code == 200:
+        print(f"Notification sent to topic '{topic}'.")
+    else:
+        print(f"Failed to send notification: {response.text}")
 
 class FileCleaner():
     def __init__(self):

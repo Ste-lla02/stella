@@ -1,6 +1,6 @@
 from src.segmentation.mask_evaluation import *
 from src.utils.configuration import Configuration
-from src.utils.metautils import leq, geq
+from src.utils.utils import leq, geq
 
 class MaskFeaturing:
     mapping = {

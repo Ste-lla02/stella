@@ -4,7 +4,8 @@ from src.preprocessing.preprocessing import Preprocessor
 from src.segmentation.evaluator import MaskFeaturing
 from src.segmentation.sam_segmentation import Segmenter
 from src.utils.configuration import Configuration
-from src.utils.metautils import FileCleaner
+from src.utils.utils import FileCleaner, send_ntfy_notification
+
 
 def build(conf: Configuration):
     # Cleaning
@@ -25,16 +26,25 @@ def build(conf: Configuration):
         masks = segmenter.mask_generation(faint_image)
         masks = list(filter(lambda x: f.filter(x), masks))
         images.add_masks(image_name,masks)
-    images.save_pickle()
-    pass
+        images.save_pickle(image_name)
+        images.remove(image_name)
+    topic = conf.get('ntfy_topic')
+    send_ntfy_notification(topic)
 
 def progress(conf: Configuration):
     images = State(conf)
     images.load_pickle()
     pass
 
+
+def clean(conf: Configuration):
+    cleaner = FileCleaner()
+    cleaner.clean()
+
+
 functions = {
     'build': build,
+    'clean': clean,
     'progress': progress
 }
 
