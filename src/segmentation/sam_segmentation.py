@@ -1,5 +1,6 @@
 import os
-import cv2, numpy as np
+import cv2
+import numpy as np
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
 
 from src.segmentation.evaluator import MaskFeaturing
