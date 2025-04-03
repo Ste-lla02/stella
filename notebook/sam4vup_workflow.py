@@ -82,7 +82,7 @@ def show_anns_with_ids(anns):
 
     ax.imshow(img)
 
-image = cv2.imread('/content/ID_1.png')
+image = cv2.imread('/content/ID_47.png')
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 plt.figure(figsize=(10,10))
@@ -112,10 +112,11 @@ nel caso di utilizzo pickle
 
 # Import del pkl se già ne possiedi uno
 import pickle
-with open('/content/masks_id1_raw.pkl', 'rb') as f:
-    masks = pickle.load(f)
+with open('/content/ID_47.pickle', 'rb') as f:
+    masks_from_pkl = pickle.load(f)
 
-print(f"Real Masks Loaded: {len(masks)}")
+print(f"Real Masks Loaded: {len(masks_from_pkl)}")
+masks = masks_from_pkl['masks']
 
 fig, axs = plt.subplots(1, 3, figsize=(10, 10))
 # Plot: Real Image
@@ -679,27 +680,30 @@ def overlay_mask_on_image(image, mask, alpha=0.5):
     return cv2.addWeighted(image, 1, color_mask, alpha, 0)
 
 def labeling_helper(use_filtered=False):
-    image_name = input("Inserisci l'id del paziente: ").upper()
+    patient_id = input("Inserisci l'id del paziente: ") #todo: automatizzare l'id del paziente da csv esterno
+    image_name = "ID_" + patient_id
     image_path = image_name + ".png"  # o .jpg se serve
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    is_pathologic = input("Il paziente è patologico? (s/n): ").lower() == 's'
+    is_pathologic = input("Il paziente è patologico? (s/n): ").lower() == 's' #todo: automatizzare patologia o meno
     use_filtered = input("Usare maschere filtrate? (s/n): ").lower() == 's'
 
     if use_filtered:
-        pkl_path = '/content/masks_samdefault_id1_roundness_filtered.pkl'
+        pkl_path = '/content/ID_47.pickle'
     else:
-      pkl_path = '/content/masks_id1_raw.pkl'
+      pkl_path = '/content/ID_47.pickle'
 
     with open(pkl_path, 'rb') as f:
-          masks = pickle.load(f)
+          masks_from_pkl = pickle.load(f)
 
+
+    masks = masks_from_pkl['masks']
     results = []
 
     for mask in masks:
         print("Etichette disponibili: 1-vescica, 2-uretra, 3-vescica_and_uretra, 4-other")
-        mask_id = mask["id"]
+        mask_id = mask['id']
         binary_mask = mask["segmentation"]
         overlay = overlay_mask_on_image(image.copy(), binary_mask)
 
@@ -717,7 +721,7 @@ def labeling_helper(use_filtered=False):
         row = {
             "image_id": image_name,
             "is_pathologic": is_pathologic,
-            "mask_id": mask_id,
+            #"mask_id": mask_id,
             "label_id": label_id,
             "label": label
         }
@@ -734,6 +738,7 @@ def labeling_helper(use_filtered=False):
     df = pd.DataFrame(results)
     output_csv = f'{image_name}_annotation.csv'
     df.to_csv(output_csv, index=False)
+
 
     print(f"Etichettatura completata e salvata in {output_csv}")
 
