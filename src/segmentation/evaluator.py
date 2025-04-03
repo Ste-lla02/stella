@@ -33,7 +33,7 @@ class MaskFeaturing:
     def filter(self, mask) -> bool:
         filters = self.configuration.get('filters')
         outcomes = list(map(lambda x: self.single_filter(mask, x), filters))
-        retval = all(outcomes)
+        retval = len(outcomes) == 0 or all(outcomes)
         return retval
 
     def single_evaluation(self, mask: dict, filter: str) -> float:

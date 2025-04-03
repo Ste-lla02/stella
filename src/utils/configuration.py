@@ -25,8 +25,10 @@ class Configuration(metaclass=Singleton):
 
     @staticmethod
     def tolist(value):
-        retval = value.split(',')
-        retval = list(map(lambda x: x.strip(),retval))
+        retval = value
+        if len(retval) > 0:
+            retval = value.split(',')
+            retval = list(map(lambda x: x.strip(),retval))
         return retval
 
     def loadSection(self, reader, s):
