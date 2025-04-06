@@ -5,6 +5,7 @@ from src.segmentation.evaluator import MaskFeaturing
 from src.segmentation.sam_segmentation import Segmenter
 from src.utils.configuration import Configuration
 from src.utils.utils import FileCleaner, send_ntfy_notification
+from src.labelling.labeler import Dobby
 
 
 def build(conf: Configuration):
@@ -33,7 +34,10 @@ def build(conf: Configuration):
 
 def progress(conf: Configuration):
     images = State(conf)
-    images.load_pickle()
+    helper=Dobby(conf)
+    helper.labeling_helper()
+
+    #images.load_pickle()
     pass
 
 
