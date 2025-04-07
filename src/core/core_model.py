@@ -88,6 +88,10 @@ class State:
         with open(output_path, "wb") as f:
             pickle.dump(self.images[image_name], f)
 
+    def check_pickle(self, image_name):
+        filename = f'{image_name}.pickle'
+        check=(filename in self.pickle.parents)
+        return check
     def load_pickle(self):
         self.images = dict()
         filenames = list(os.listdir(self.pickle))

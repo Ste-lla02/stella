@@ -71,6 +71,11 @@ class Configuration(metaclass=Singleton):
             self.put('image_scaling', float(temp))
             temp = reader['main'].get('picklefolder', None)
             self.put('picklefolder', temp)
+            temp = reader['main'].get('lablescsv', None)
+            self.put('lablescsv', temp)
+            temp = reader['main'].get('codescsv', None)
+            self.put('codescsv', temp)
+
             temp = reader['main'].get('ntfy_topic', None)
             self.put('ntfy_topic', temp)
             temp = reader['main'].get('imagetype', None)

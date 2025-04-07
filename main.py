@@ -10,8 +10,8 @@ from src.labelling.labeler import Dobby
 
 def build(conf: Configuration):
     # Cleaning
-    cleaner = FileCleaner()
-    cleaner.clean()
+    #cleaner = FileCleaner()
+    #cleaner.clean()
     # Starting
     images = State(configuration)
     topic = conf.get('ntfy_topic')
@@ -20,16 +20,17 @@ def build(conf: Configuration):
         try:
             image_name = os.path.basename(image_filename).split('.')[0]
             image = images.get_original(image_name)
-            preprocessor = Preprocessor(conf)
-            faint_image = preprocessor.execute(image)
-            images.add_preprocessed(image_name,faint_image)
-            # Segmentation
-            segmenter = Segmenter()
-            f = MaskFeaturing()
-            masks = segmenter.mask_generation(faint_image)
-            masks = list(filter(lambda x: f.filter(x), masks))
-            images.add_masks(image_name,masks)
-            images.save_pickle(image_name)
+            if(not images.check_pickle(image_name)):
+                preprocessor = Preprocessor(conf)
+                faint_image = preprocessor.execute(image)
+                images.add_preprocessed(image_name,faint_image)
+                # Segmentation
+                segmenter = Segmenter()
+                f = MaskFeaturing()
+                masks = segmenter.mask_generation(faint_image)
+                masks = list(filter(lambda x: f.filter(x), masks))
+                images.add_masks(image_name,masks)
+                images.save_pickle(image_name)
         except:
             send_ntfy_error(topic, image_name)
         finally:

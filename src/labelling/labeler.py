@@ -63,7 +63,7 @@ class Dobby():
         check=True
         while (id_index<len(patient_id) and (check==True)):
             image_name=patient_id[id_index]
-            if(image_name not in already_processed and image_name!='ID_2'):
+            if(image_name not in already_processed and image_name=='ID_5'):
                 image_path = self.configuration.get('srcfolder')+'/'+str(image_name) +'.png' # o .jpg se serve
                 image = cv2.imread(image_path)
                 if((image is None)==False):
