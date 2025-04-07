@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 from IPython.display import clear_output
 from src.utils.configuration import Configuration
-#https://www.youtube.com/watch?v=8DTb-lseCdQ
+
 class Dobby():
 
     label_dict = {
@@ -25,7 +25,7 @@ class Dobby():
             df=pd.read_csv(df_name,sep=';')
 
         except FileNotFoundError:
-            columns=['Record ID','VUP','pkl_format','label_id','label,segmentation','area_box','predicted_iou','point_coords','stability_score','crop_box','id']
+            columns=['Record ID','VUP','label_id','label_segmentation','area','predicted_iou','point_coords','stability_score','crop_box','id']
             df=pd.DataFrame(columns=columns)
         return df
 
@@ -44,6 +44,7 @@ class Dobby():
 
         label_id = input("Insert label: ")
         label = self.label_dict.get(label_id, 'other')
+        clear_output(wait=True)
         return label_id, label
 
 
@@ -62,37 +63,34 @@ class Dobby():
         check=True
         while (id_index<len(patient_id) and (check==True)):
             image_name=patient_id[id_index]
-            if(image_name not in already_processed):
+            if(image_name not in already_processed and image_name!='ID_2'):
                 image_path = self.configuration.get('srcfolder')+'/'+str(image_name) +'.png' # o .jpg se serve
                 image = cv2.imread(image_path)
                 if((image is None)==False):
                     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    is_pathologic = df_input[df_input['Record ID']==id]['VUP']
+                    is_pathologic = df_input[df_input['Record ID']==image_name]['VUP'].values[0]
                     pkl_path = self.configuration.get('picklefolder')+'/'+image_name+'.pickle'
                     try:
                         with open(pkl_path, 'rb') as f:
                               masks_from_pkl = pickle.load(f)
                         masks = masks_from_pkl['masks']
-                        results = []
+
 
                         for mask in masks:
-                            label_id,label=self.mask_labeling(mask,image)
-
                             row = {
-                                "image_id": image_name,
-                                "is_pathologic": is_pathologic,
-                                "label_id": label_id,
-                                "label": label
+                                "Record ID": image_name,
+                                "VUP": is_pathologic,
                             }
-
+                            label_id,label=self.mask_labeling(mask,image)
+                            row["label_id"]= label_id
+                            row["label_segmentation"]= label
                             for k, v in mask.items():
                                 if k not in row:
                                     row[k] = v
+                            df_output.loc[len(df_output)] = row
 
-                            results.append(row)
-                            clear_output(wait=True)
-                            # append in csv
-                            df_output.loc[len(df_output)]=row
+
+
 
                         ask = input("Continue? (Y/N): ").strip().lower()
                         check = (ask == 'y' or ask == 'Y')
@@ -104,10 +102,10 @@ class Dobby():
 
             id_index+=1
 
-
-        df_output.to_csv(index=False,sep=';')
+        df_output_name=self.configuration.get('lablescsv')
+        df_output.to_csv(df_output_name,index=False,sep=';')
 
         if (id_index==len(patient_id)):
             print("🧦")
             print("Dobby is a free elf!")
-            print("https://www.youtube.com/watch?v=9jK-NcRmVcw")
+            print("https://www.youtube.com/watch?v=8DTb-lseCdQ")
