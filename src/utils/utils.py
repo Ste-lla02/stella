@@ -38,6 +38,16 @@ def send_ntfy_notification(topic):
     else:
         print(f"Failed to send notification: {response.text}")
 
+def send_ntfy_error(topic, image_name):
+    url = f"https://ntfy.sh/{topic}"
+    project = "sud4vup"
+    message = f"{project}: error on image {image_name}!!"
+    response = requests.post(url, data=message.encode('utf-8'))
+    if response.status_code == 200:
+        print(f"Notification sent to topic '{topic}'.")
+    else:
+        print(f"Failed to send notification: {response.text}")
+
 class FileCleaner():
     def __init__(self):
         self.folder_names = ['maskfolder', 'preprocessedfolder']
