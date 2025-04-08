@@ -3,7 +3,8 @@ from PIL import Image
 import cv2, numpy as np
 import pickle
 from src.utils.utils import cv2_to_pil, pil_to_cv2
-
+import glob
+error_list=open('errors.txt','w')
 class State:
     def __init__(self, conf):
         self.input_directory = conf.get('srcfolder')
@@ -34,7 +35,10 @@ class State:
             overlay = np.zeros((h, w, 3), dtype=np.uint8)  # Immagine vuota per le maschere
             for mask in masks:
                 mask_img = mask['segmentation'].astype(np.uint8)  # Converti la maschera in uint8 (0-1 -> 0-255)
-                color = np.random.randint(0, 255, (3,), dtype=np.uint8)  # Colore casuale
+                if len(masks)==1:
+                    color=[255, 0, 0] #rosso se ho solo una mask
+                else:
+                    color = np.random.randint(0, 255, (3,), dtype=np.uint8)  # Colore casuale
                 overlay[mask_img > 0] = color  # Applica colore alla maschera
             if base_image is not None:
                 base_img = pil_to_cv2(base_image)
@@ -88,13 +92,25 @@ class State:
         with open(output_path, "wb") as f:
             pickle.dump(self.images[image_name], f)
 
+    def check_pickle(self, image_name):
+        filename = f'{image_name}.pickle'
+        pattern = os.path.join(self.pickle, filename)
+        check=False
+        if(glob.glob(pattern)):
+            check=True
+        return check
+
     def load_pickle(self):
         self.images = dict()
         filenames = list(os.listdir(self.pickle))
         for filename in filenames:
             image_name = os.path.splitext(filename)[0]
             input_path = os.path.join(self.pickle, filename)
-            with open(input_path, "rb") as f:
-                temp = pickle.load(f)
-                self.images[image_name] = {**self.images, **temp}
+            try:
+                with open(input_path, "rb") as f:
+                    temp = pickle.load(f)
+                    self.images[image_name] = temp
+            except Exception as e:
+                error_list.write('ERROR pickle ' + image_name + '\n')
+                error_list.write(str(e) + '\n')
 
