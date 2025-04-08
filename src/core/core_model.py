@@ -92,6 +92,7 @@ class State:
         filename = f'{image_name}.pickle'
         check=(filename in self.pickle.parents)
         return check
+
     def load_pickle(self):
         self.images = dict()
         filenames = list(os.listdir(self.pickle))
