@@ -4,7 +4,7 @@ import cv2, numpy as np
 import pickle
 from src.utils.utils import cv2_to_pil, pil_to_cv2
 import glob
-
+error_list=open('errors.txt','w')
 class State:
     def __init__(self, conf):
         self.input_directory = conf.get('srcfolder')
@@ -35,7 +35,10 @@ class State:
             overlay = np.zeros((h, w, 3), dtype=np.uint8)  # Immagine vuota per le maschere
             for mask in masks:
                 mask_img = mask['segmentation'].astype(np.uint8)  # Converti la maschera in uint8 (0-1 -> 0-255)
-                color = np.random.randint(0, 255, (3,), dtype=np.uint8)  # Colore casuale
+                if len(masks)==1:
+                    color=[255, 0, 0] #rosso se ho solo una mask
+                else:
+                    color = np.random.randint(0, 255, (3,), dtype=np.uint8)  # Colore casuale
                 overlay[mask_img > 0] = color  # Applica colore alla maschera
             if base_image is not None:
                 base_img = pil_to_cv2(base_image)
@@ -108,6 +111,6 @@ class State:
                     temp = pickle.load(f)
                     self.images[image_name] = temp
             except Exception as e:
-                print('ERROR pickle ' + image_name)
-                print(e)
+                error_list.write('ERROR pickle ' + image_name + '\n')
+                error_list.write(str(e) + '\n')
 

@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 import torch
-from skimage import io
-from skimage.util import img_as_float
+#from skimage import io
+#from skimage.util import img_as_float
 from PIL import Image
 import torchvision.datasets as datasets
 from torchvision import transforms

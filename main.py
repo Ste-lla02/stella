@@ -7,6 +7,10 @@ from src.utils.configuration import Configuration
 from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error
 from src.labelling.labeler import Dobby
 from src.classification.loader import Loader
+import torch.optim as optim
+import torch.nn as nn
+from torchvision import models
+from src.classification import Classification
 
 
 def build(conf: Configuration):
@@ -40,7 +44,17 @@ def build(conf: Configuration):
     send_ntfy_notification(topic)
 
 def classification(conf: Configuration):
-    dataset = Loader(conf).load_mask_dataset()
+    loader = Loader(conf).load_data()
+    model = models.resnet50(pretrained=False)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+    classifier = Classification(model, criterion, optimizer, data_sizes, num_epochs)
+    best_model = classifier.train(train_loader)
+    epoch_acc, labels_list, preds_list = classifier.test(best_model, test_loader)
+
+    # Valutazione delle prestazioni del modello
+    classifier.evaluate(labels_list, preds_list)
 
 
 
