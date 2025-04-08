@@ -33,7 +33,7 @@ def build(conf: Configuration):
                 images.save_pickle(image_name)
         except Exception as e:
             send_ntfy_error(topic, image_name)
-            send_ntfy_notification(topic,'ERRORE: '+str(e))
+            send_ntfy_error(topic,str(e))
         finally:
             images.remove(image_name)
     send_ntfy_notification(topic)

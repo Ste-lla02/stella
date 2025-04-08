@@ -3,6 +3,7 @@ from PIL import Image
 import cv2, numpy as np
 import pickle
 from src.utils.utils import cv2_to_pil, pil_to_cv2
+import glob
 
 class State:
     def __init__(self, conf):
@@ -90,7 +91,10 @@ class State:
 
     def check_pickle(self, image_name):
         filename = f'{image_name}.pickle'
-        check=(filename in self.pickle.parents)
+        pattern = os.path.join(self.pickle, filename)
+        check=False
+        if(glob.glob(pattern)):
+            check=True
         return check
 
     def load_pickle(self):
