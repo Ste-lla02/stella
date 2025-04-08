@@ -63,7 +63,7 @@ class Dobby():
         check=True
         while (id_index<len(patient_id) and (check==True)):
             image_name=patient_id[id_index]
-            if(image_name not in already_processed and image_name=='ID_5'):
+            if(image_name not in already_processed):
                 image_path = self.configuration.get('srcfolder')+'/'+str(image_name) +'.png' # o .jpg se serve
                 image = cv2.imread(image_path)
                 if((image is None)==False):
@@ -75,7 +75,7 @@ class Dobby():
                               masks_from_pkl = pickle.load(f)
                         masks = masks_from_pkl['masks']
 
-
+                        to_remove=list()
                         for mask in masks:
                             row = {
                                 "Record ID": image_name,
@@ -84,26 +84,36 @@ class Dobby():
                             label_id,label=self.mask_labeling(mask,image)
                             row["label_id"]= label_id
                             row["label_segmentation"]= label
+
                             for k, v in mask.items():
                                 if k not in row:
                                     row[k] = v
                             df_output.loc[len(df_output)] = row
+                            to_remove.append(len(df_output) - 1)
 
+                        ask = input("Do you want to delete the masks for the image .. and refill it? (Y/N): ").strip().lower()
+                        if ((ask == 'y' or ask == 'Y')):
+                            df_output.drop(index=to_remove, inplace=True)
+                            df_output.reset_index(drop=True, inplace=True)
+                            id_index-=1
+                        else:
+                            df_output_name = self.configuration.get('lablescsv')
+                            df_output.to_csv(df_output_name, index=False, sep=';')
 
 
 
                         ask = input("Continue? (Y/N): ").strip().lower()
                         check = (ask == 'y' or ask == 'Y')
-                    except FileNotFoundError:
-                        print('pickle ' + image_name + ' not found')
+                    except Exception as e:
+                        print('ERROR pickle ' + image_name )
+                        print(e)
 
                 else:
                     print('image '+image_name+' not found')
 
             id_index+=1
 
-        df_output_name=self.configuration.get('lablescsv')
-        df_output.to_csv(df_output_name,index=False,sep=';')
+
 
         if (id_index==len(patient_id)):
             print("🧦")
