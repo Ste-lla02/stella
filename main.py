@@ -31,8 +31,9 @@ def build(conf: Configuration):
                 masks = list(filter(lambda x: f.filter(x), masks))
                 images.add_masks(image_name,masks)
                 images.save_pickle(image_name)
-        except:
+        except Exception as e:
             send_ntfy_error(topic, image_name)
+            send_ntfy_notification(topic,'ERRORE: '+str(e))
         finally:
             images.remove(image_name)
     send_ntfy_notification(topic)
