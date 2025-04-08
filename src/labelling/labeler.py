@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 from IPython.display import clear_output
 from src.utils.configuration import Configuration
-
+error_list=open('errors.txt','w')
 class Dobby():
 
     label_dict = {
@@ -105,11 +105,11 @@ class Dobby():
                         ask = input("Continue? (Y/N): ").strip().lower()
                         check = (ask == 'y' or ask == 'Y')
                     except Exception as e:
-                        print('ERROR pickle ' + image_name )
-                        print(e)
+                        error_list.write('ERROR pickle ' + image_name +'\n')
+                        error_list.write(str(e)+'\n')
 
                 else:
-                    print('image '+image_name+' not found')
+                    error_list.write('image '+image_name+' not found\n')
 
             id_index+=1
 

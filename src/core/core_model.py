@@ -103,7 +103,11 @@ class State:
         for filename in filenames:
             image_name = os.path.splitext(filename)[0]
             input_path = os.path.join(self.pickle, filename)
-            with open(input_path, "rb") as f:
-                temp = pickle.load(f)
-                self.images[image_name] = {**self.images, **temp}
+            try:
+                with open(input_path, "rb") as f:
+                    temp = pickle.load(f)
+                    self.images[image_name] = temp
+            except Exception as e:
+                print('ERROR pickle ' + image_name)
+                print(e)
 

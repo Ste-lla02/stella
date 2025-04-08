@@ -6,6 +6,7 @@ from src.segmentation.sam_segmentation import Segmenter
 from src.utils.configuration import Configuration
 from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error
 from src.labelling.labeler import Dobby
+from src.classification.loader import Loader
 
 
 def build(conf: Configuration):
@@ -38,6 +39,13 @@ def build(conf: Configuration):
             images.remove(image_name)
     send_ntfy_notification(topic)
 
+def classification(conf: Configuration):
+    dataset = Loader(conf).load_mask_dataset()
+
+
+
+    #images.load_pickle()
+    pass
 def progress(conf: Configuration):
     images = State(conf)
     helper=Dobby(conf)
@@ -55,7 +63,8 @@ def clean(conf: Configuration):
 functions = {
     'build': build,
     'clean': clean,
-    'progress': progress
+    'progress': progress,
+    'classification':classification
 }
 
 if __name__ == '__main__':
