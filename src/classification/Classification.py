@@ -1,7 +1,7 @@
 import torch
 import time
 import copy
-from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, roc_auc_score
+from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
 
 class Classification:
     def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs):
@@ -105,7 +105,8 @@ class Classification:
         return epoch_acc, all_labels, all_preds
 
     def evaluate(self, test_labels, test_preds):
-        cm = confusion_matrix(test_labels, test_preds)
+
+        cm=multilabel_confusion_matrix(test_labels, test_preds)
         tn, fp, fn, tp = cm.ravel()
 
         accuracy = accuracy_score(test_labels, test_preds)
@@ -120,3 +121,41 @@ class Classification:
         print(f'Confusion Matrix:\n{cm}')
 
         return sensitivity, specificity, accuracy
+
+    def evaluate_multilabels(self,y_true, y_pred):
+        mcm = multilabel_confusion_matrix(y_true, y_pred)
+        metrics = dict()
+        # Print confusion matrix for each label
+        for idx, label_mcm in enumerate(mcm):
+            print(f"Confusion Matrix for Label {idx}:")
+            print(label_mcm)
+            print()
+
+            TP = label_mcm[1, 1]
+            TN = label_mcm[0, 0]
+            FP = label_mcm[0, 1]
+            FN = label_mcm[1, 0]
+
+            # Precision = TP / (TP + FP)
+            precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+
+            # Recall = TP / (TP + FN)
+            recall = TP / (TP + FN) if (TP + FN) != 0 else 0
+
+            specificity = TN / (TN + FP)
+            accuracy= (TP+TN) / (TN+ TP + FP+FN)
+
+
+            # F1 Score = 2 * (Precision * Recall) / (Precision + Recall)
+            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
+
+            metrics[idx] = {
+                'accuracy':accuracy,
+                'specificity':specificity,
+                'precision': precision,
+                'recall': recall,
+                'f1_score': f1
+            }
+        for label, metric in metrics.items():
+            print(f"Label {label}: Accuracy = {metric['accuracy']:.2f}, Precision = {metric['precision']:.2f}, Recall = {metric['recall']:.2f}, Specificity = {metric['specificity']:.2f}, F1 Score = {metric['f1_score']:.2f}")
+

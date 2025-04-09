@@ -18,7 +18,11 @@ class MaskDataset(Dataset):
         self.labels = labels  # etichette (opzionali)
         self.transform  = transforms.Compose([
             transforms.Resize((224, 224)),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.unsqueeze(0))
+            #transforms.Grayscale(num_output_channels=3),
+            #transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 #std=[0.229, 0.224, 0.225])
             #transforms.Normalize(mean=[self.mean], std=[self.std]
         ])
 
@@ -31,14 +35,17 @@ class MaskDataset(Dataset):
 
         if self.transform:
             x = self.transform(x)
-
+        y = torch.tensor([y-1], dtype=torch.long)
         return x, y
-
+    def get_num_classes(self):
+        classes=list(set(self.labels))
+        return len(classes)
 class Loader():
     def __init__(self,conf):
         self.configuration = conf
         self.lables_csv=pd.read_csv(self.configuration.get('lablescsv'),sep=';')
         self.manager=State(conf)
+        self.dataset=self.load_mask_dataset()
         self.train_loader=None
         self.test_loader=None
         self.dataset_sizes=None
@@ -85,12 +92,14 @@ class Loader():
                 binary_mask=mask['segmentation']
                 #overlay=self.manager.make_overall_image(id,[mask])
                 mask_pillow = cv2_to_pil(binary_mask)
+                #print(type(mask_pillow))
+                #print(mask_pillow.getbands())
                 #tensor_mask=torch.from_numpy(overlay)
                 X.append(mask_pillow)
                 label_mask=subset[subset['id']==mask_id]['label_id'].values[0]
                 Y.append(label_mask)
-        dataset= MaskDataset(X,Y)
-        return dataset
+        return MaskDataset(X,Y)
+
     def load_data(self):
         '''
         Carica il dataset, calcola media e deviazione standard, lo normalizza e lo divide in train e test set.
@@ -99,20 +108,27 @@ class Loader():
             tuple: DataLoader per train, DataLoader per test, dimensioni del dataset, nomi delle classi.
         '''
         # Leggi e carica il dataset
-        dataset = self.load_mask_dataset()
+
 
         # Calcola la media e la deviazione standard
         #aggiungi parametri nel config
-        loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
-        test_size = int(len(loader.dataset.images) * 0.30)
-        train_size = len(loader.dataset.images) - test_size
-        train_dataset, test_dataset = random_split(loader.dataset, [train_size, test_size])
-
+        #loader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True)
+        test_size = int(len(self.dataset.images) * 0.2)
+        train_size = len(self.dataset.images) - test_size
+        train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
+        index_train=train_dataset.indices
+        X_train=[self.dataset.images[i] for i in index_train]
+        Y_train=[self.dataset.labels[i] for i in index_train]
+        index_test=test_dataset.indices
+        X_test = [self.dataset.images[i] for i in index_test]
+        Y_test = [self.dataset.labels[i] for i in index_test]
         # Crea DataLoader per train e test
-        self.train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True,
-                                                        num_workers=4)
-        self.test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False,
-                                                       num_workers=4)
+
+        #X_train_loader = torch.utils.data.DataLoader(X_train, batch_size=4, shuffle=True)
+        self.train_loader = MaskDataset(X_train, Y_train)
+        #X_test = torch.utils.data.DataLoader(X_test, batch_size=4, shuffle=True)
+        self.test_loader = MaskDataset(X_test, Y_test)
+
 
         # Ottiene le dimensioni del dataset e i nomi delle classi
         self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
