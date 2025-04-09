@@ -12,6 +12,7 @@ class State:
         self.preprocessed_directory = conf.get('preprocessedfolder')
         self.mask_directory = conf.get("maskfolder")
         self.pickle = conf.get('picklefolder')
+        self.save_flag = conf.get('save_images')
         self.clean()
 
     def clean(self):
@@ -82,9 +83,10 @@ class State:
         self.save_image_and_log(merged_pillow, self.mask_directory, filename)
 
     def save_image_and_log(self, image, directory, filename):
-        output_path = os.path.join(directory,filename)
-        image.save(output_path)
-        print(f"Immagine salvata: {output_path}")
+        if self.save_flag:
+            output_path = os.path.join(directory, filename)
+            image.save(output_path)
+            print(f"Immagine salvata: {output_path}")
 
     def save_pickle(self, image_name):
         filename = f'{image_name}.pickle'
