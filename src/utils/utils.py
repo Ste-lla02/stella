@@ -49,14 +49,21 @@ def send_ntfy_error(topic, image_name):
         print(f"Failed to send notification: {response.text}")
 
 class FileCleaner():
-    def __init__(self):
-        self.folder_names = ['maskfolder', 'preprocessedfolder']
+    folder_register = {
+        'image': ('clean_images',['maskfolder', 'preprocessedfolder']),
+        'pickle': ('clean_pickles',['picklefolder'])
+    }
+
+    def __init__(self, conf: Configuration):
+        self.conf = conf
 
     def clean(self):
         configuration = Configuration()
-        for folder_name in self.folder_names:
-            folder = configuration.get(folder_name)
-            shutil.rmtree(folder)
-            os.makedirs(folder)
-
-
+        for folder_kind in FileCleaner.folder_register.keys():
+            flag_name, folder_names = FileCleaner.folder_register[folder_kind]
+            flag = self.conf.get(flag_name)
+            if flag:
+                for folder_name in folder_names:
+                    folder = configuration.get(folder_name)
+                    shutil.rmtree(folder)
+                    os.makedirs(folder)

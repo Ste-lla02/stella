@@ -14,9 +14,6 @@ from src.classification import Classification
 
 
 def build(conf: Configuration):
-    # Cleaning
-    #cleaner = FileCleaner()
-    #cleaner.clean()
     # Starting
     images = State(configuration)
     topic = conf.get('ntfy_topic')
@@ -60,6 +57,7 @@ def classification(conf: Configuration):
 
     #images.load_pickle()
     pass
+
 def progress(conf: Configuration):
     images = State(conf)
     helper=Dobby(conf)
@@ -70,7 +68,7 @@ def progress(conf: Configuration):
 
 
 def clean(conf: Configuration):
-    cleaner = FileCleaner()
+    cleaner = FileCleaner(conf)
     cleaner.clean()
 
 
