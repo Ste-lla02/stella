@@ -14,16 +14,14 @@ from torch.utils.data import Dataset
 from src.utils.utils import cv2_to_pil
 class MaskDataset(Dataset):
     def __init__(self, images, labels):
-        self.images = images  # immagini o maschere come array NumPy
-        self.labels = labels  # etichette (opzionali)
+        self.images = images
+        self.labels = labels
+        self.mean, self.std=self.compute_mean_std()
         self.transform  = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
-            transforms.Lambda(lambda x: x.unsqueeze(0))
-            #transforms.Grayscale(num_output_channels=3),
-            #transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 #std=[0.229, 0.224, 0.225])
-            #transforms.Normalize(mean=[self.mean], std=[self.std]
+            transforms.Normalize(mean=self.mean, std=self.std),
+            transforms.Lambda(lambda x: x.unsqueeze(0)),
         ])
 
     def __len__(self):
@@ -37,9 +35,32 @@ class MaskDataset(Dataset):
             x = self.transform(x)
         y = torch.tensor([y-1], dtype=torch.long)
         return x, y
+
+    def compute_mean_std(self):
+        means=[]
+        stds= []
+        transform_no_norm = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor()
+        ])
+
+        for img in self.images:
+            tensor = transform_no_norm(img)  # (C, H, W)
+            means.append(tensor.mean(dim=(1, 2)))  # media per canale
+            stds.append(tensor.std(dim=(1, 2)))    # std per canale
+
+        mean = torch.stack(means).mean(dim=0)  # (3,)
+        std = torch.stack(stds).mean(dim=0)    # (3,)
+        return mean.tolist(), std.tolist()
+
+
     def get_num_classes(self):
         classes=list(set(self.labels))
         return len(classes)
+
+
+
+
 class Loader():
     def __init__(self,conf):
         self.configuration = conf
@@ -49,34 +70,6 @@ class Loader():
         self.train_loader=None
         self.test_loader=None
         self.dataset_sizes=None
-
-
-
-    def compute_mean_std(self, loader):
-        '''
-        Calcola la media e la deviazione standard delle immagini, necessarie per la normalizzazione
-
-        Args:
-            loader (DataLoader): DataLoader del dataset.
-
-        Returns:
-            tuple: Media e deviazione standard.
-        '''
-        num_pixels = 0
-        mean = 0.0
-        std = 0.0
-
-        for images, _ in loader:
-            batch_size, num_channels, height, width = images.shape
-            num_pixels += batch_size * height * width
-            mean += images.mean(axis=(0, 2, 3)).sum()
-            std += images.std(axis=(0, 2, 3)).sum()
-
-        mean /= num_pixels
-        std /= num_pixels
-        return mean, std
-
-
 
     def load_mask_dataset(self):
         ids=self.lables_csv['Record ID'].unique()
@@ -90,11 +83,7 @@ class Loader():
             for mask in masks:
                 mask_id=mask['id']
                 binary_mask=mask['segmentation']
-                #overlay=self.manager.make_overall_image(id,[mask])
                 mask_pillow = cv2_to_pil(binary_mask)
-                #print(type(mask_pillow))
-                #print(mask_pillow.getbands())
-                #tensor_mask=torch.from_numpy(overlay)
                 X.append(mask_pillow)
                 label_mask=subset[subset['id']==mask_id]['label_id'].values[0]
                 Y.append(label_mask)
@@ -108,11 +97,6 @@ class Loader():
             tuple: DataLoader per train, DataLoader per test, dimensioni del dataset, nomi delle classi.
         '''
         # Leggi e carica il dataset
-
-
-        # Calcola la media e la deviazione standard
-        #aggiungi parametri nel config
-        #loader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True)
         test_size = int(len(self.dataset.images) * 0.2)
         train_size = len(self.dataset.images) - test_size
         train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
@@ -122,15 +106,8 @@ class Loader():
         index_test=test_dataset.indices
         X_test = [self.dataset.images[i] for i in index_test]
         Y_test = [self.dataset.labels[i] for i in index_test]
-        # Crea DataLoader per train e test
-
-        #X_train_loader = torch.utils.data.DataLoader(X_train, batch_size=4, shuffle=True)
         self.train_loader = MaskDataset(X_train, Y_train)
-        #X_test = torch.utils.data.DataLoader(X_test, batch_size=4, shuffle=True)
         self.test_loader = MaskDataset(X_test, Y_test)
-
-
-        # Ottiene le dimensioni del dataset e i nomi delle classi
         self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
 
 

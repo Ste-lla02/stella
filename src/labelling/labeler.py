@@ -80,7 +80,7 @@ class Dobby():
                         df_output.loc[len(df_output)] = row
                         to_remove.append(len(df_output) - 1)
 
-                    ask = input("Do you want to delete the masks for the image .. and refill it? (Y/N): ").strip().lower()
+                    ask = input("Do you want to delete the masks for the image "+image_name+" and refill it? (Y/N): ").strip().lower()
                     if ((ask == 'y')):
                         df_output.drop(index=to_remove, inplace=True)
                         df_output.reset_index(drop=True, inplace=True)

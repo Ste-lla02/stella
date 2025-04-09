@@ -137,5 +137,12 @@ class Configuration(metaclass=Singleton):
             self.put('max_pixels', float(temp))
             temp = reader['filters'].get('min_pixels', 100000)
             self.put('min_pixels', float(temp))
+            #Classification
+            temp = reader['classification'].get('test_split', 0.2)
+            self.put('test_split', float(temp))
+            temp = reader['classification'].get('num_epochs', 100)
+            self.put('num_epochs', int(temp))
+            temp = reader['classification'].get('learning_rate', 1e-4)
+            self.put('learning_rate', float(temp))
         except Exception as s:
             print(s)

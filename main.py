@@ -46,31 +46,22 @@ def build(conf: Configuration):
 
 def classification(conf: Configuration):
     torch.manual_seed(1)
-    batch_size = 4
-    test_split = 0.2
-    num_epochs = 1
-    learning_rate = 1e-4
     loader = Loader(conf)
     loader.load_data()
     model = models.resnet18()
     model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
     model.fc = nn.Linear(512, loader.dataset.get_num_classes())
-    #print(model)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, num_epochs)
+    optimizer = optim.SGD(model.parameters(), lr=conf.get('learning_rate'))
+    classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, conf.get('num_epochs'))
     best_model = classifier.train(loader.train_loader)
     epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
-    # Valutazione delle prestazioni del modello
     classifier.evaluate_multilabels(labels_list, preds_list)
-    #images.load_pickle()
     pass
+
 def progress(conf: Configuration):
-    images = State(conf)
     helper=Dobby(conf)
     helper.labeling_helper()
-
-    #images.load_pickle()
     pass
 
 
