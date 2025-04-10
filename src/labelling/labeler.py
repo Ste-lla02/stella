@@ -59,11 +59,11 @@ class Dobby():
         check=True
         while (id_index<len(patient_id) and (check==True)):
             image_name=patient_id[id_index]
-            if(image_name not in already_processed):
-                try:
-                    overall_image = self.manager.images[image_name]
+            try:
+                overall_image = self.manager.images[image_name]
+                masks = overall_image['masks']
+                if (image_name not in already_processed):
                     is_pathologic = df_input[df_input['Record ID']==image_name]['VUP'].values[0]
-                    masks = overall_image['masks']
                     to_remove=list()
                     for mask in masks:
                         row = {
@@ -77,6 +77,8 @@ class Dobby():
                         for k, v in mask.items():
                             if k not in row:
                                 row[k] = v
+                        mask['label_segmentation']=label_id
+                        self.manager.save_pickle(image_name)
                         df_output.loc[len(df_output)] = row
                         to_remove.append(len(df_output) - 1)
 
@@ -90,15 +92,24 @@ class Dobby():
                         df_output.to_csv(df_output_name, index=False, sep=';')
                         ask = input("Continue? (Y/N): ").strip().lower()
                         check = (ask == 'y')
-                except KeyError as e:
-                    print('Image '+image_name+' pickle not found')
+                elif(not('label_segmentation' in masks[0].keys())):
+                    subset=df_output[df_output['Record ID']==image_name]
+                    for mask in masks:
+                        mask['label_segmentation']=subset[subset['id']==mask['id']]['label_id'].values[0]
+                    self.manager.save_pickle(image_name)
+
+
+
+            except KeyError as e:
+                print('Image '+image_name+' pickle not found')
+
 
 
             id_index+=1
 
 
 
-        if (id_index==len(patient_id)):
-            print("🧦")
-            print("Dobby is a free elf!")
-            print("https://www.youtube.com/watch?v=8DTb-lseCdQ")
+            if (id_index==len(patient_id)):
+                print("🧦")
+                print("Dobby is a free elf!")
+                print("https://www.youtube.com/watch?v=8DTb-lseCdQ")
