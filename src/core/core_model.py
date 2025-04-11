@@ -59,6 +59,9 @@ class State:
     def get_original(self, image_name: str) -> Image:
         return self.images[image_name]['original']
 
+    def set_original(self, image_name: str, image: Image):
+        self.images[image_name]['original'] = image
+
     def get_channel(self, image_name: str, channel_name: str) -> Image:
         return self.images[image_name][channel_name]
 
