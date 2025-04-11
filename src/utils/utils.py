@@ -50,6 +50,19 @@ def send_ntfy_error(topic, image_name, error):
     else:
         print(f"Failed to send notification: {response.text}")
 
+def send_ntfy_warning(topic, image_name, error):
+    url = f"https://ntfy.sh/{topic}"
+    username = getpass.getuser()
+    hostname = socket.gethostname()
+    project = "sud4vup"
+    message = f"{project}: warning by {username} on {hostname} on image {image_name}: {error}!!"
+    response = requests.post(url, data=message.encode('utf-8'))
+    if response.status_code == 200:
+        print(f"Notification sent to topic '{topic}'.")
+    else:
+        print(f"Failed to send notification: {response.text}")
+
+
 class FileCleaner():
     folder_register = {
         'image': ('clean_images',['maskfolder', 'preprocessedfolder']),
