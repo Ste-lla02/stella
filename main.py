@@ -22,7 +22,7 @@ def build(conf: Configuration):
     for image_filename in images.get_base_images():
         image_name = os.path.basename(image_filename).split('.')[0]
         if not images.check_pickle(image_name):
-            attempt = 1
+            attempt = 2
             while attempt > 0:
                 image = images.get_original(image_name)
                 try:
@@ -42,8 +42,7 @@ def build(conf: Configuration):
                     if attempt > 0:
                         if type(e) == cv2.error:
                             send_ntfy_warning(topic, image_name, str(e))
-                            gray, alpha = cv2.split(image)
-                            image = gray
+                            image = image.convert("RGB")
                             images.set_original(image_name, image)
                     else:
                         send_ntfy_error(topic, image_name, str(e))
