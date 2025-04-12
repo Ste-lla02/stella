@@ -52,7 +52,7 @@ def build(conf: Configuration):
                         images.remove(image_name)
     send_ntfy_notification(topic)
 
-def classification(conf: Configuration):
+def training(conf: Configuration):
     loader = Loader(conf).load_data()
     model = models.resnet50(pretrained=False)
     criterion = nn.CrossEntropyLoss()
@@ -70,7 +70,7 @@ def classification(conf: Configuration):
     #images.load_pickle()
     pass
 
-def progress(conf: Configuration):
+def labeller(conf: Configuration):
     images = State(conf)
     helper=Dobby(conf)
     helper.labeling_helper()
@@ -87,8 +87,8 @@ def clean(conf: Configuration):
 functions = {
     'build': build,
     'clean': clean,
-    'progress': progress,
-    'classification':classification
+    'dobby': labeller,
+    'training': training
 }
 
 if __name__ == '__main__':
