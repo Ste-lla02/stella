@@ -5,7 +5,7 @@ from src.preprocessing.preprocessing import Preprocessor
 from src.segmentation.evaluator import MaskFeaturing
 from src.segmentation.sam_segmentation import Segmenter
 from src.utils.configuration import Configuration
-from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error, send_ntfy_warning, pil_to_cv2
+from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error, send_ntfy_warning
 from src.labelling.labeler import Dobby
 from src.classification.loader import Loader
 import torch.optim as optim
@@ -22,7 +22,7 @@ def build(conf: Configuration):
     for image_filename in images.get_base_images():
         image_name = os.path.basename(image_filename).split('.')[0]
         if not images.check_pickle(image_name):
-            attempt = 2
+            attempt = 1
             while attempt > 0:
                 image = images.get_original(image_name)
                 try:
@@ -42,7 +42,8 @@ def build(conf: Configuration):
                     if attempt > 0:
                         if type(e) == cv2.error:
                             send_ntfy_warning(topic, image_name, str(e))
-                            image = image.convert("RGB")
+                            gray, alpha = cv2.split(image)
+                            image = gray
                             images.set_original(image_name, image)
                     else:
                         send_ntfy_error(topic, image_name, str(e))
@@ -82,6 +83,7 @@ def progress(conf: Configuration):
 def clean(conf: Configuration):
     cleaner = FileCleaner(conf)
     cleaner.clean()
+
 
 functions = {
     'build': build,
