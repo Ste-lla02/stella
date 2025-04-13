@@ -153,6 +153,6 @@ class Configuration(metaclass=Singleton):
             temp = reader['classification'].get('num_epochs', 100)
             self.put('num_epochs', int(temp))
             temp = reader['classification'].get('learning_rate', 1e-4)
-            self.put('learning_rate', float
+            self.put('learning_rate', float(temp))
         except Exception as s:
             print(s)
