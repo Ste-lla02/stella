@@ -137,12 +137,22 @@ class Configuration(metaclass=Singleton):
             self.put('max_pixels', float(temp))
             temp = reader['filters'].get('min_pixels', 100000)
             self.put('min_pixels', float(temp))
-            #Classification
+            #control
+            temp = reader['control'].get('save_images', True)
+            temp = temp == 'True'
+            self.put('save_images', temp)
+            temp = reader['control'].get('clean_images', True)
+            temp = temp == 'True'
+            self.put('clean_images', temp)
+            temp = reader['control'].get('clean_pickles', True)
+            temp = temp == 'True'
+            self.put('clean_pickles', temp)
+            # Classification
             temp = reader['classification'].get('test_split', 0.2)
             self.put('test_split', float(temp))
             temp = reader['classification'].get('num_epochs', 100)
             self.put('num_epochs', int(temp))
             temp = reader['classification'].get('learning_rate', 1e-4)
-            self.put('learning_rate', float(temp))
+            self.put('learning_rate', float
         except Exception as s:
             print(s)

@@ -31,32 +31,54 @@ def send_ntfy_notification(topic):
     username = getpass.getuser()
     hostname = socket.gethostname()
     project = "sud4vup"
-    message = f"{project}: execution completed by {username} on {hostname}!!"
+    message = f"{project}: completed by {username} on {hostname}!!"
     response = requests.post(url, data=message.encode('utf-8'))
     if response.status_code == 200:
         print(f"Notification sent to topic '{topic}'.")
     else:
         print(f"Failed to send notification: {response.text}")
 
-def send_ntfy_error(topic, image_name):
+def send_ntfy_error(topic, image_name, error):
     url = f"https://ntfy.sh/{topic}"
+    username = getpass.getuser()
+    hostname = socket.gethostname()
     project = "sud4vup"
-    message = f"{project}: error on image {image_name}!!"
+    message = f"{project}: error by {username} on {hostname} on image {image_name}: {error}!!"
     response = requests.post(url, data=message.encode('utf-8'))
     if response.status_code == 200:
         print(f"Notification sent to topic '{topic}'.")
     else:
         print(f"Failed to send notification: {response.text}")
+
+def send_ntfy_warning(topic, image_name, error):
+    url = f"https://ntfy.sh/{topic}"
+    username = getpass.getuser()
+    hostname = socket.gethostname()
+    project = "sud4vup"
+    message = f"{project}: warning by {username} on {hostname} on image {image_name}: {error}!!"
+    response = requests.post(url, data=message.encode('utf-8'))
+    if response.status_code == 200:
+        print(f"Notification sent to topic '{topic}'.")
+    else:
+        print(f"Failed to send notification: {response.text}")
+
 
 class FileCleaner():
-    def __init__(self):
-        self.folder_names = ['maskfolder', 'preprocessedfolder']
+    folder_register = {
+        'image': ('clean_images',['maskfolder', 'preprocessedfolder']),
+        'pickle': ('clean_pickles',['picklefolder'])
+    }
+
+    def __init__(self, conf: Configuration):
+        self.conf = conf
 
     def clean(self):
         configuration = Configuration()
-        for folder_name in self.folder_names:
-            folder = configuration.get(folder_name)
-            shutil.rmtree(folder)
-            os.makedirs(folder)
-
-
+        for folder_kind in FileCleaner.folder_register.keys():
+            flag_name, folder_names = FileCleaner.folder_register[folder_kind]
+            flag = self.conf.get(flag_name)
+            if flag:
+                for folder_name in folder_names:
+                    folder = configuration.get(folder_name)
+                    shutil.rmtree(folder)
+                    os.makedirs(folder)
