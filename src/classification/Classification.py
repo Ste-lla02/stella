@@ -156,6 +156,12 @@ class Classification:
                 'recall': recall,
                 'f1_score': f1
             }
+        new_keys=['Bladder','Urethra','Bladder and Urethra','Other']
+        metrics = dict(zip(new_keys, metrics.values()))
         for label, metric in metrics.items():
-            report_txt.write(f"Label {label}: Accuracy = {metric['accuracy']:.2f}, Precision = {metric['precision']:.2f}, Recall = {metric['recall']:.2f}, Specificity = {metric['specificity']:.2f}, F1 Score = {metric['f1_score']:.2f}")
+            report_txt.write('Classification metrics for class: '+str(label)+':\n')
+            for met,values in metric.items():
+                report_txt.write(met+': '+str(values)+' \n')
+
+            report_txt.write('\n\n')
 
