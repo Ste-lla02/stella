@@ -147,6 +147,13 @@ class Configuration(metaclass=Singleton):
             temp = reader['control'].get('clean_pickles', True)
             temp = temp == 'True'
             self.put('clean_pickles', temp)
+            # Augmentation
+            temp = reader['augmentation'].get('rotation_range', 0)
+            self.put('rotation_range', int(temp))
+            temp = reader['augmentation'].get('flip_hor_probability', 0)
+            self.put('flip_hor_probability', float(temp))
+            temp = reader['augmentation'].get('flip_ver_probability', 0)
+            self.put('flip_ver_probability', float(temp))
             # Classification
             temp = reader['classification'].get('test_split', 0.2)
             self.put('test_split', float(temp))

@@ -2,7 +2,7 @@ import torch
 import time
 import copy
 from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
-
+report_txt=open('output/label_classification_report.txt','w')
 class Classification:
     def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs):
         self.model = model
@@ -127,9 +127,9 @@ class Classification:
         metrics = dict()
         # Print confusion matrix for each label
         for idx, label_mcm in enumerate(mcm):
-            print(f"Confusion Matrix for Label {idx}:")
-            print(label_mcm)
-            print()
+            report_txt.write(f"Confusion Matrix for Label {idx}:")
+            report_txt.write(str(label_mcm))
+            report_txt.write('\n')
 
             TP = label_mcm[1, 1]
             TN = label_mcm[0, 0]
@@ -157,5 +157,5 @@ class Classification:
                 'f1_score': f1
             }
         for label, metric in metrics.items():
-            print(f"Label {label}: Accuracy = {metric['accuracy']:.2f}, Precision = {metric['precision']:.2f}, Recall = {metric['recall']:.2f}, Specificity = {metric['specificity']:.2f}, F1 Score = {metric['f1_score']:.2f}")
+            report_txt.write(f"Label {label}: Accuracy = {metric['accuracy']:.2f}, Precision = {metric['precision']:.2f}, Recall = {metric['recall']:.2f}, Specificity = {metric['specificity']:.2f}, F1 Score = {metric['f1_score']:.2f}")
 

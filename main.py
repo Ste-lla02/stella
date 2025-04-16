@@ -10,7 +10,7 @@ from src.classification.loader import Loader
 import torch.optim as optim
 import torch.nn as nn
 from torchvision import models
-from src.classification import Classification
+from src.classification.Classification import Classification
 import torch
 
 
