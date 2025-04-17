@@ -46,6 +46,7 @@ def build(conf: Configuration):
 
 def classification(conf: Configuration):
     topic = conf.get('ntfy_topic')
+    print('Start..\n')
     torch.manual_seed(1)
     loader = Loader(conf)
     loader.load_data()
