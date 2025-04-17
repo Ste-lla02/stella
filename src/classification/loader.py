@@ -135,7 +135,7 @@ class Loader():
 
 
 
-    def image_generator(self,image,rep,label):
+    def image_generator(self,image,label,n):
         rotation=self.configuration.get('rotation_range')
         p_hor=self.configuration.get('flip_hor_probability')
         p_ver=self.configuration.get('flip_ver_probability')
@@ -145,7 +145,7 @@ class Loader():
             transforms.RandomRotation(degrees=(0, rotation)),
             transforms.RandomVerticalFlip(p=p_ver)
         ])
-        for i in range(rep):
+        for i in range(n):
             result = transformer(image)
             new_images.append(result)
             self.dataset.add_new_instances(result,label)
@@ -162,7 +162,7 @@ class Loader():
                 q, r = divmod(target_size, current_size)
                 #combinations=[(random.choice(rotation), random.choice(width), random.choice(height)) for _ in range(repeat)]
                 for index in indexes:
-                    new_images = self.image_generator(self.dataset.images[index], q,c)
+                    new_images = self.image_generator(self.dataset.images[index],int(c),q)
                     '''
                     fig = plt.figure()
                     # im=cv2_to_pil(im)
