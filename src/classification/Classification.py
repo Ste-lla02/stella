@@ -14,6 +14,12 @@ class Classification:
         self.best_acc = 0.0
         self.best_epoch = 0
         self.best_model_path = "best_model.pth"  # Percorso dove salvare il modello migliore
+        self.label_dict = {
+            '0': 'bladder',
+            '1': 'urethra',
+            '2': 'bladder_and_urethra',
+            '3': 'other'
+        }
 
     def train(self, train_loader):
         since = time.time()
@@ -127,7 +133,7 @@ class Classification:
         metrics = dict()
         # Print confusion matrix for each label
         for idx, label_mcm in enumerate(mcm):
-            report_txt.write(f"Confusion Matrix for Label {idx}:")
+            report_txt.write(f"Confusion Matrix for Label {self.label_dict[idx]}: \n")
             report_txt.write(str(label_mcm))
             report_txt.write('\n')
 
@@ -149,15 +155,13 @@ class Classification:
             # F1 Score = 2 * (Precision * Recall) / (Precision + Recall)
             f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
 
-            metrics[idx] = {
+            metrics[self.label_dict[idx]] = {
                 'accuracy':accuracy,
                 'specificity':specificity,
                 'precision': precision,
                 'recall': recall,
                 'f1_score': f1
             }
-        new_keys=['Bladder','Urethra','Bladder and Urethra','Other']
-        metrics = dict(zip(new_keys, metrics.values()))
         for label, metric in metrics.items():
             report_txt.write('Classification metrics for class: '+str(label)+':\n')
             for met,values in metric.items():

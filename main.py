@@ -45,6 +45,7 @@ def build(conf: Configuration):
     send_ntfy_notification(topic)
 
 def classification(conf: Configuration):
+    topic = conf.get('ntfy_topic')
     torch.manual_seed(1)
     loader = Loader(conf)
     loader.load_data()
@@ -57,14 +58,11 @@ def classification(conf: Configuration):
     best_model = classifier.train(loader.train_loader)
     epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
     classifier.evaluate_multilabels(labels_list, preds_list)
+    send_ntfy_notification(topic)
     pass
 
 
-
-    #images.load_pickle()
-    pass
 def progress(conf: Configuration):
-    images = State(conf)
     helper=Dobby(conf)
     helper.labeling_helper()
 

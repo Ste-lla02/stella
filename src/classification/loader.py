@@ -77,31 +77,12 @@ class MaskDataset(Dataset):
 class Loader():
     def __init__(self,conf):
         self.configuration = conf
-        self.lables_csv=pd.read_csv(self.configuration.get('lablescsv'),sep=';')
+        #self.lables_csv=pd.read_csv(self.configuration.get('lablescsv'),sep=';')
         self.manager=State(conf)
         self.dataset=self.load_mask_dataset()
         self.train_loader=None
         self.test_loader=None
         self.dataset_sizes=None
-
-    #rendere indipendente dal csv
-    def load_mask_dataset_old(self):
-        ids=self.lables_csv['Record ID'].unique()
-        self.manager.load_pickle()
-        X=list()
-        Y=list()
-        for id in ids:
-            subset=self.lables_csv[self.lables_csv['Record ID']==id]
-            overall_image=self.manager.images[id]
-            masks=overall_image['masks']
-            for mask in masks:
-                mask_id=mask['id']
-                binary_mask=mask['segmentation']
-                mask_pillow = cv2_to_pil(binary_mask)
-                X.append(mask_pillow)
-                label_mask=subset[subset['id']==mask_id]['label_id'].values[0]
-                Y.append(label_mask)
-        return MaskDataset(X,Y)
 
     def load_mask_dataset(self):
         self.manager.load_pickle()
@@ -115,7 +96,7 @@ class Loader():
                     mask_pillow = cv2_to_pil(binary_mask)
                     X.append(mask_pillow)
                     label_mask=mask['label_segmentation']
-                    Y.append(label_mask)
+                    Y.append(int(label_mask))
         return MaskDataset(X,Y)
 
     def load_data(self):
