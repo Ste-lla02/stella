@@ -1,3 +1,4 @@
+import tensorflow as tf
 import sys, os
 from src.core.core_model import State
 from src.preprocessing.preprocessing import Preprocessor
