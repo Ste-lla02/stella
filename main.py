@@ -12,6 +12,7 @@ import torch.nn as nn
 from torchvision import models
 from src.classification.Classification import Classification
 import torch
+import pdb
 
 
 def build(conf: Configuration):
@@ -45,6 +46,7 @@ def build(conf: Configuration):
     send_ntfy_notification(topic)
 
 def classification(conf: Configuration):
+    pdb.set_trace()
     topic = conf.get('ntfy_topic')
     print('Start..\n')
     torch.manual_seed(1)
