@@ -81,11 +81,11 @@ class Loader():
         self.configuration = conf
         #self.lables_csv=pd.read_csv(self.configuration.get('lablescsv'),sep=';')
         self.manager=State(conf)
+        print(f'check --> {self.manager.images}')
         self.dataset=self.load_mask_dataset()
         self.train_loader=None
         self.test_loader=None
         self.dataset_sizes=None
-        print(f'check --> {self.manager.images}')
 
     def load_mask_dataset(self):
         self.manager.load_pickle()
