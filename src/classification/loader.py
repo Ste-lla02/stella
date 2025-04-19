@@ -41,6 +41,8 @@ class MaskDataset(Dataset):
             transforms.ToTensor()
         ])
 
+        print(f'la lunghezza e {len(self.images)}')
+
         for img in self.images:
             tensor = transform_no_norm(img)  # (C, H, W)
             means.append(tensor.mean(dim=(1, 2)))  # media per canale
