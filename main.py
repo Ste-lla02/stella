@@ -46,7 +46,6 @@ def build(conf: Configuration):
     send_ntfy_notification(topic)
 
 def classification(conf: Configuration):
-    pdb.set_trace()
     topic = conf.get('ntfy_topic')
     print('Start..\n')
     torch.manual_seed(1)
