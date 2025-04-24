@@ -91,7 +91,6 @@ class Dobby():
                             if k not in row:
                                 row[k] = v
                         mask['label_segmentation']=label_id
-                        self.manager.save_pickle(image_name)
                         self.df_output.loc[len(self.df_output)] = row
                         to_remove.append(len(self.df_output) - 1)
                     ask = input("Do you want to delete the masks for the image "+image_name+" and refill it? (Y/N): ").strip().lower()
@@ -100,6 +99,7 @@ class Dobby():
                         self.df_output.reset_index(drop=True, inplace=True)
                         id_index-=1
                     else:
+                        self.manager.save_pickle(image_name)
                         self.df_output_name = self.configuration.get('lablescsv')
                         self.df_output.to_csv(self.df_output_name, index=False, sep=';')
                         ask = input("Continue? (Y/N): ").strip().lower()
