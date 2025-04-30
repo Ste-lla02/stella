@@ -2,9 +2,9 @@ import torch
 import time
 import copy
 from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
-report_txt=open('output/label_classification_report.txt','w')
+
 class Classification:
-    def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs):
+    def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs,device):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -13,6 +13,7 @@ class Classification:
         self.best_model_wts = copy.deepcopy(model.state_dict())  # Salva i pesi migliori
         self.best_acc = 0.0
         self.best_epoch = 0
+        self.device = device
         self.best_model_path = "best_model.pth"  # Percorso dove salvare il modello migliore
         self.label_dict = {
             '0': 'bladder',
@@ -20,9 +21,11 @@ class Classification:
             '2': 'bladder_and_urethra',
             '3': 'other'
         }
+        self.report_txt = open('output/label_classification_report.txt', 'w')
 
     def train(self, train_loader):
         since = time.time()
+        self.model.to(self.device)
         self.model.train()
 
         for epoch in range(self.num_epochs):
@@ -34,6 +37,8 @@ class Classification:
             labels_list, preds_list = [], []
 
             for inputs, labels in train_loader:
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
                 self.optimizer.zero_grad()
 
                 with torch.set_grad_enabled(True):
@@ -54,42 +59,41 @@ class Classification:
             epoch_acc = running_corrects.double() / self.dataset_sizes['train']
             print(f'Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
-            # Salva il modello con la migliore accuracy
             if epoch_acc > self.best_acc:
                 self.best_acc = epoch_acc
                 self.best_model_wts = copy.deepcopy(self.model.state_dict())
                 self.best_epoch = epoch
-                torch.save(self.best_model_wts, self.best_model_path)  # Salva i pesi migliori
+                torch.save(self.best_model_wts, self.best_model_path)
                 print(f"Best model saved at epoch {epoch}")
 
         time_elapsed = time.time() - since
         print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-
         print(f"Best training accuracy: {self.best_acc:.4f} at epoch {self.best_epoch}")
 
-        # Restituisce il modello con i migliori pesi
         self.model.load_state_dict(self.best_model_wts)
         return self.model
 
     def test(self, model, test_loader):
-        # Carico il modello con i pesi migliori
         model.load_state_dict(torch.load(self.best_model_path))
+        model.to(self.device)
         model.eval()
 
-        # Verifica se i pesi sono stati caricati correttamente
         loaded_state_dict = torch.load(self.best_model_path)
         for key in model.state_dict():
-            if not torch.equal(model.state_dict()[key], loaded_state_dict[key]):
-                print("Warning: modello non caricato")
+            if not torch.equal(model.state_dict()[key].cpu(), loaded_state_dict[key].cpu()):
+                print("Warning: modello non caricato correttamente")
                 break
 
         running_loss = 0.0
         running_corrects = 0
 
-        all_labels = []  # Lista per le etichette reali
-        all_preds = []  # Lista per le etichette predette
+        all_labels = []
+        all_preds = []
 
         for inputs, labels in test_loader:
+            inputs = inputs.to(self.device)
+            labels = labels.to(self.device)
+
             with torch.no_grad():
                 outputs = model(inputs)
                 _, preds = torch.max(outputs, 1)
@@ -111,13 +115,12 @@ class Classification:
         return epoch_acc, all_labels, all_preds
 
     def evaluate(self, test_labels, test_preds):
-
-        cm=multilabel_confusion_matrix(test_labels, test_preds)
+        cm = multilabel_confusion_matrix(test_labels, test_preds)
         tn, fp, fn, tp = cm.ravel()
 
         accuracy = accuracy_score(test_labels, test_preds)
         sensitivity = recall_score(test_labels, test_preds)
-        specificity = tn / (tn + fp)
+        specificity = tn / (tn + fp) if (tn + fp) != 0 else 0
         roc_auc = roc_auc_score(test_labels, test_preds)
 
         print(f'Accuracy: {accuracy:.4f}')
@@ -128,44 +131,42 @@ class Classification:
 
         return sensitivity, specificity, accuracy
 
-    def evaluate_multilabels(self,y_true, y_pred):
+    def evaluate_multilabels(self, y_true, y_pred, report_path="report.txt"):
         mcm = multilabel_confusion_matrix(y_true, y_pred)
         metrics = dict()
-        # Print confusion matrix for each label
-        for idx, label_mcm in enumerate(mcm):
-            report_txt.write(f"Confusion Matrix for Label {self.label_dict[idx]}: \n")
-            report_txt.write(str(label_mcm))
-            report_txt.write('\n')
 
-            TP = label_mcm[1, 1]
-            TN = label_mcm[0, 0]
-            FP = label_mcm[0, 1]
-            FN = label_mcm[1, 0]
+        with open(report_path, 'w') as self.report_txt:
+            for idx, label_mcm in enumerate(mcm):
+                label_name = self.label_dict.get(idx, f"Label {idx}")
+                self.report_txt.write(f"Confusion Matrix for {label_name}: \n")
+                self.report_txt.write(str(label_mcm))
+                self.report_txt.write('\n')
 
-            # Precision = TP / (TP + FP)
-            precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+                TP = label_mcm[1, 1]
+                TN = label_mcm[0, 0]
+                FP = label_mcm[0, 1]
+                FN = label_mcm[1, 0]
 
-            # Recall = TP / (TP + FN)
-            recall = TP / (TP + FN) if (TP + FN) != 0 else 0
+                precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+                recall = TP / (TP + FN) if (TP + FN) != 0 else 0
+                specificity = TN / (TN + FP) if (TN + FP) != 0 else 0
+                accuracy = (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) != 0 else 0
+                f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
 
-            specificity = TN / (TN + FP)
-            accuracy= (TP+TN) / (TN+ TP + FP+FN)
+                metrics[label_name] = {
+                    'accuracy': accuracy,
+                    'specificity': specificity,
+                    'precision': precision,
+                    'recall': recall,
+                    'f1_score': f1
+                }
 
+                self.report_txt.write(f'Metrics for class "{label_name}":\n')
+                for met, val in metrics[label_name].items():
+                    self.report_txt.write(f'{met}: {val:.4f}\n')
+                self.report_txt.write('\n')
+                self.report_txt.close()
 
-            # F1 Score = 2 * (Precision * Recall) / (Precision + Recall)
-            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
+        print(f"Multilabel evaluation report saved to: {report_path}")
 
-            metrics[self.label_dict[idx]] = {
-                'accuracy':accuracy,
-                'specificity':specificity,
-                'precision': precision,
-                'recall': recall,
-                'f1_score': f1
-            }
-        for label, metric in metrics.items():
-            report_txt.write('Classification metrics for class: '+str(label)+':\n')
-            for met,values in metric.items():
-                report_txt.write(met+': '+str(values)+' \n')
-
-            report_txt.write('\n\n')
 
