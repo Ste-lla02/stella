@@ -38,6 +38,18 @@ def send_ntfy_notification(topic):
     else:
         print(f"Failed to send notification: {response.text}")
 
+def send_ntfy_start(topic,process):
+    url = f"https://ntfy.sh/{topic}"
+    username = getpass.getuser()
+    hostname = socket.gethostname()
+    project = "sud4vup"
+    message = f"{project}: {username} runs {process} on {hostname}!!"
+    response = requests.post(url, data=message.encode('utf-8'))
+    if response.status_code == 200:
+        print(f"Notification sent to topic '{topic}'.")
+    else:
+        print(f"Failed to send notification: {response.text}")
+
 def send_ntfy_error(topic, image_name, error):
     url = f"https://ntfy.sh/{topic}"
     username = getpass.getuser()

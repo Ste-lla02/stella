@@ -1,11 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
-import cv2
-import numpy as np
-import pickle
 from IPython.display import clear_output
-from src.utils.configuration import Configuration
 from src.core.core_model import State
 
 class Dobby():
@@ -67,8 +62,8 @@ class Dobby():
         self.manager.load_pickle()
         self.update_pikle(already_processed)
         id_index=0
-        check=True
-        while (id_index<len(patient_id) and (check==True)):
+        check1=True
+        while (id_index<len(patient_id) and (check1==True)):
             image_name=patient_id[id_index]
             try:
                 overall_image = self.manager.images[image_name]
@@ -103,7 +98,7 @@ class Dobby():
                         self.df_output_name = self.configuration.get('lablescsv')
                         self.df_output.to_csv(self.df_output_name, index=False, sep=';')
                         ask = input("Continue? (Y/N): ").strip().lower()
-                        check = (ask == 'y')
+                        check1 = (ask == 'y')
             except KeyError as e:
                 print('Image '+image_name+' pickle not found')
             id_index+=1

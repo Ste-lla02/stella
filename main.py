@@ -4,7 +4,7 @@ from src.preprocessing.preprocessing import Preprocessor
 from src.segmentation.evaluator import MaskFeaturing
 from src.segmentation.sam_segmentation import Segmenter
 from src.utils.configuration import Configuration
-from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error
+from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error,send_ntfy_start
 from src.labelling.labeler import Dobby
 from src.classification.loader import Loader
 import torch.optim as optim
@@ -46,24 +46,28 @@ def build(conf: Configuration):
 
 def classification(conf: Configuration):
     topic = conf.get('ntfy_topic')
-    print('Start..\n')
-    torch.manual_seed(1)
-    loader = Loader(conf)
-    loader.load_data()
-    print('Dataset loaded\n')
-    model = models.resnet18()
-    model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-    model.fc = nn.Linear(512, loader.dataset.get_num_classes())
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=conf.get('learning_rate'))
-    classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, conf.get('num_epochs'))
-    print('Model instanciated\n')
-    best_model = classifier.train(loader.train_loader)
-    print('Training completed\n')
-    epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
-    print('Test completed\n')
-    classifier.evaluate_multilabels(labels_list, preds_list)
-    send_ntfy_notification(topic)
+    try:
+        send_ntfy_start(topic,'classifciation')
+        print('Start..\n')
+        torch.manual_seed(1)
+        loader = Loader(conf)
+        loader.load_data()
+        print('Dataset loaded\n')
+        model = models.resnet18()
+        model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        model.fc = nn.Linear(512, loader.dataset.get_num_classes())
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(model.parameters(), lr=conf.get('learning_rate'))
+        classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, conf.get('num_epochs'))
+        print('Model instanciated\n')
+        best_model = classifier.train(loader.train_loader)
+        print('Training completed\n')
+        epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
+        print('Test completed\n')
+        classifier.evaluate_multilabels(labels_list, preds_list)
+        send_ntfy_notification(topic)
+    except Exception as e:
+        send_ntfy_error(topic, str(e))
     pass
 
 
