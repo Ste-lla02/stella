@@ -1,10 +1,11 @@
+import pandas as pd
 import torch
 import time
 import copy
 from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
 
 class Classification:
-    def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs,device):
+    def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs,device,conf, loader):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -21,9 +22,12 @@ class Classification:
             '2': 'bladder_and_urethra',
             '3': 'other'
         }
-        self.report_txt = open('output/label_classification_report.txt', 'w')
+        self.df_name=conf.get('reportcsv')
+        self.results=dict()
+        self.report=pd.DataFrame(columns=['epoch','phase','loss','class','accuracy','specificity', 'precision','recall','f1_score'])
+        self.loader=loader
 
-    def train(self, train_loader):
+    def train(self):
         since = time.time()
         self.model.to(self.device)
         self.model.train()
@@ -36,7 +40,7 @@ class Classification:
             running_corrects = 0
             labels_list, preds_list = [], []
 
-            for inputs, labels in train_loader:
+            for inputs, labels in self.loader.train_loader:
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
                 self.optimizer.zero_grad()
@@ -58,6 +62,11 @@ class Classification:
             epoch_loss = running_loss / self.dataset_sizes['train']
             epoch_acc = running_corrects.double() / self.dataset_sizes['train']
             print(f'Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+            y_true_train = torch.cat(labels_list)
+            y_pred_train = torch.cat(preds_list)
+            self.evaluate_multilabels('training',epoch,epoch_loss,y_true_train,y_pred_train)
+            test_loss, test_acc, y_true_test,y_pred_test = self.test(self.model, epoch=epoch)
+            self.evaluate_multilabels('validating', epoch, test_loss, y_true_test, y_pred_test)
 
             if epoch_acc > self.best_acc:
                 self.best_acc = epoch_acc
@@ -66,6 +75,7 @@ class Classification:
                 torch.save(self.best_model_wts, self.best_model_path)
                 print(f"Best model saved at epoch {epoch}")
 
+
         time_elapsed = time.time() - since
         print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
         print(f"Best training accuracy: {self.best_acc:.4f} at epoch {self.best_epoch}")
@@ -73,24 +83,16 @@ class Classification:
         self.model.load_state_dict(self.best_model_wts)
         return self.model
 
-    def test(self, model, test_loader):
-        model.load_state_dict(torch.load(self.best_model_path))
+    def test(self, model, epoch=None):
         model.to(self.device)
         model.eval()
 
-        loaded_state_dict = torch.load(self.best_model_path)
-        for key in model.state_dict():
-            if not torch.equal(model.state_dict()[key].cpu(), loaded_state_dict[key].cpu()):
-                print("Warning: modello non caricato correttamente")
-                break
-
         running_loss = 0.0
         running_corrects = 0
-
         all_labels = []
         all_preds = []
 
-        for inputs, labels in test_loader:
+        for inputs, labels in self.loader.test_loader:
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
 
@@ -108,11 +110,18 @@ class Classification:
         all_labels = torch.cat(all_labels).numpy()
         all_preds = torch.cat(all_preds).numpy()
 
+
         epoch_loss = running_loss / self.dataset_sizes['test']
         epoch_acc = running_corrects.double() / self.dataset_sizes['test']
-        print(f'Test Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
-        return epoch_acc, all_labels, all_preds
+        if epoch is not None:
+            print(f'Epoch {epoch} - Test Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+        else:
+            print(f'Test Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+
+        return epoch_loss, epoch_acc, all_preds, all_labels
+
+
 
     def evaluate(self, test_labels, test_preds):
         cm = multilabel_confusion_matrix(test_labels, test_preds)
@@ -131,42 +140,39 @@ class Classification:
 
         return sensitivity, specificity, accuracy
 
-    def evaluate_multilabels(self, y_true, y_pred, report_path="report.txt"):
+    def evaluate_multilabels(self, trial,epoch,loss,y_true, y_pred):
         mcm = multilabel_confusion_matrix(y_true, y_pred)
         metrics = dict()
+        for idx, label_mcm in enumerate(mcm):
+            label_name = self.label_dict[str(idx)]
 
-        with open(report_path, 'w') as self.report_txt:
-            for idx, label_mcm in enumerate(mcm):
-                label_name = self.label_dict.get(idx, f"Label {idx}")
-                self.report_txt.write(f"Confusion Matrix for {label_name}: \n")
-                self.report_txt.write(str(label_mcm))
-                self.report_txt.write('\n')
 
-                TP = label_mcm[1, 1]
-                TN = label_mcm[0, 0]
-                FP = label_mcm[0, 1]
-                FN = label_mcm[1, 0]
+            TP = label_mcm[1, 1]
+            TN = label_mcm[0, 0]
+            FP = label_mcm[0, 1]
+            FN = label_mcm[1, 0]
 
-                precision = TP / (TP + FP) if (TP + FP) != 0 else 0
-                recall = TP / (TP + FN) if (TP + FN) != 0 else 0
-                specificity = TN / (TN + FP) if (TN + FP) != 0 else 0
-                accuracy = (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) != 0 else 0
-                f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
-
-                metrics[label_name] = {
-                    'accuracy': accuracy,
-                    'specificity': specificity,
-                    'precision': precision,
-                    'recall': recall,
-                    'f1_score': f1
-                }
-
-                self.report_txt.write(f'Metrics for class "{label_name}":\n')
-                for met, val in metrics[label_name].items():
-                    self.report_txt.write(f'{met}: {val:.4f}\n')
-                self.report_txt.write('\n')
-                self.report_txt.close()
-
-        print(f"Multilabel evaluation report saved to: {report_path}")
+            precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+            recall = TP / (TP + FN) if (TP + FN) != 0 else 0
+            specificity = TN / (TN + FP) if (TN + FP) != 0 else 0
+            accuracy = (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) != 0 else 0
+            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
+            metrics[label_name] = {
+                'accuracy': accuracy,
+                'specificity': specificity,
+                'precision': precision,
+                'recall': recall,
+                'f1_score': f1
+            }
+        for key, values in metrics.items():
+            row = dict()
+            row['phase'] = trial
+            row['epoch'] = epoch
+            row['loss'] = loss
+            row['class'] = key
+            row.update(values)
+            self.report.loc[len(self.report)] = row
+        self.report.to_csv(self.df_name, index=False, sep=';')
+        return metrics
 
 

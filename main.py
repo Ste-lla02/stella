@@ -38,8 +38,7 @@ def build(conf: Configuration):
                 images.add_masks(image_name,masks)
                 images.save_pickle(image_name)
         except Exception as e:
-            send_ntfy_error(topic, image_name)
-            send_ntfy_error(topic,str(e))
+            send_ntfy_error(topic, image_name,str(e))
         finally:
             images.remove(image_name)
     send_ntfy_notification(topic)
@@ -47,7 +46,7 @@ def build(conf: Configuration):
 def classification(conf: Configuration):
     topic = conf.get('ntfy_topic')
     try:
-        send_ntfy_start(topic,'classifciation')
+        send_ntfy_start(topic,'classificiation')
         print('Start..\n')
         torch.manual_seed(1)
         loader = Loader(conf)
@@ -60,16 +59,16 @@ def classification(conf: Configuration):
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(model.parameters(), lr=conf.get('learning_rate'))
-        classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, conf.get('num_epochs'), device)
+        classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, conf.get('num_epochs'), device,conf,loader)
         print('Model instanciated\n')
-        best_model = classifier.train(loader.train_loader)
-        print('Training completed\n')
-        epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
-        print('Test completed\n')
-        classifier.evaluate_multilabels(labels_list, preds_list)
+        best_model = classifier.train()
+        print('Trial completed\n')
+        #epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
+        #print('Test completed\n')
+        #classifier.evaluate_multilabels(labels_list, preds_list)
         send_ntfy_notification(topic)
     except Exception as e:
-        send_ntfy_error(topic, str(e))
+        send_ntfy_error(topic,'classification error', str(e))
     pass
 
 

@@ -75,7 +75,8 @@ class Configuration(metaclass=Singleton):
             self.put('lablescsv', temp)
             temp = reader['main'].get('codescsv', None)
             self.put('codescsv', temp)
-
+            temp = reader['main'].get('reportcsv', None)
+            self.put('reportcsv', temp)
             temp = reader['main'].get('ntfy_topic', None)
             self.put('ntfy_topic', temp)
             temp = reader['main'].get('imagetype', None)
