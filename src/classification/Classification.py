@@ -3,14 +3,17 @@ import torch
 import time
 import copy
 from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
-
+import matplotlib.pyplot as plt
+import os
 class Classification:
-    def __init__(self, model, criterion, optimizer, dataset_sizes, num_epochs,device,conf, loader):
+    def __init__(self, model, criterion, optimizer,device,conf, loader):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
-        self.dataset_sizes = dataset_sizes
-        self.num_epochs = num_epochs
+        self.loader = loader
+        self.dataset_sizes = loader.dataset_sizes
+        self.preprocessing=conf.get('preprocessing')
+        self.num_epochs = conf.get('num_epochs')
         self.best_model_wts = copy.deepcopy(model.state_dict())  # Salva i pesi migliori
         self.best_acc = 0.0
         self.best_epoch = 0
@@ -25,7 +28,7 @@ class Classification:
         self.df_name=conf.get('reportcsv')
         self.results=dict()
         self.report=pd.DataFrame(columns=['epoch','phase','loss','class','accuracy','specificity', 'precision','recall','f1_score'])
-        self.loader=loader
+
 
     def train(self):
         since = time.time()
@@ -175,4 +178,25 @@ class Classification:
         self.report.to_csv(self.df_name, index=False, sep=';')
         return metrics
 
-
+    def evaluation_graph(self):
+        selected_trial = 'validating'
+        classes = self.report['class'].unique()
+        for selected_class in classes:
+            class_1 = self.report[(self.report['class'] == selected_class) & (self.report['phase'] == selected_trial)]
+            plt.plot(class_1['epoch'], class_1['accuracy'], label='accuracy')
+            plt.plot(class_1['epoch'], class_1['specificity'], label='specificity')
+            plt.plot(class_1['epoch'], class_1['precision'], label='precision')
+            plt.plot(class_1['epoch'], class_1['recall'], label='recall')
+            plt.plot(class_1['epoch'], class_1['f1_score'], label='f1_score')
+            if (selected_trial == 'validating'):
+                trial = 'Validation'
+            plt.title(trial + ' phase metrics evaluation for label ' + selected_class)
+            plt.xlabel('Epochs')
+            plt.ylabel('Metrics')
+            plt.legend()
+            directory=self.preprocessing+'_Epoch_'+str(self.num_epochs)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            plt.savefig('output\\graphs\\'+trial + '_Class_' + selected_class + '.pdf', format='pdf', dpi=600,
+                        bbox_inches='tight', pad_inches=0, transparent=True)
+            plt.close()

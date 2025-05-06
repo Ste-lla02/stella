@@ -59,7 +59,7 @@ def classification(conf: Configuration):
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(model.parameters(), lr=conf.get('learning_rate'))
-        classifier = Classification(model, criterion, optimizer, loader.dataset_sizes, conf.get('num_epochs'), device,conf,loader)
+        classifier = Classification(model, criterion, optimizer, device,conf,loader)
         print('Model instanciated\n')
         best_model = classifier.train()
         print('Trial completed\n')

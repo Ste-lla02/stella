@@ -4,6 +4,7 @@ from torch.utils.data import random_split
 from src.core.core_model import State
 from torch.utils.data import Dataset
 from src.utils.utils import cv2_to_pil
+import random
 
 class MaskDataset(Dataset):
     def __init__(self, images, labels):
@@ -65,6 +66,15 @@ class MaskDataset(Dataset):
             if(dim>max):
                 max=dim
         return max
+
+    def get_min_size(self):
+        classes = list(set(self.labels))
+        min=len(self.labels)
+        for c in classes:
+            dim=len(self.get_class_instances(c)[0])
+            if(dim<min):
+                min=dim
+        return min
     def add_new_instances(self,image, label):
         self.images.append(image)
         self.labels.append(label)
@@ -80,6 +90,12 @@ class Loader():
         self.train_loader=None
         self.test_loader=None
         self.dataset_sizes=None
+        self.preprocessing=conf.get('preprocessing')
+        self.functions = {
+            'augmentation': self.augmentation,
+            'undersampling': self.undersampling,
+            '':lambda: None
+        }
 
     def load_mask_dataset(self):
         self.manager.load_pickle()
@@ -97,7 +113,9 @@ class Loader():
         return MaskDataset(X,Y)
 
     def load_data(self):
-        self.augmentation()
+        self.functions.get(self.preprocessing)()
+        for c in range(1,self.dataset.get_num_classes()+1):
+            print('Class '+str(c)+' number samples '+str(len(self.dataset.get_class_instances(c)[1])))
         test_size = int(len(self.dataset.images) * 0.2)
         train_size = len(self.dataset.images) - test_size
         train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
@@ -141,42 +159,18 @@ class Loader():
                 #combinations=[(random.choice(rotation), random.choice(width), random.choice(height)) for _ in range(repeat)]
                 for index in indexes:
                     new_images = self.image_generator(self.dataset.images[index],int(c),q)
-                    '''
-                    fig = plt.figure()
-                    # im=cv2_to_pil(im)
-                    plt.imshow(self.dataset.images[index])
-                    plt.axis('off')
-                    plt.show(block=False)
-                    plt.pause(0.1)
-                    plt.close(fig)
-                    for im in new_images:
-                        fig = plt.figure()
-                        #im=cv2_to_pil(im)
-                        plt.imshow(im)
-                        plt.axis('off')
-                        plt.show(block=False)
-                        plt.pause(0.1)
-                        plt.close(fig)
-                    '''
+
+    def undersampling(self):
+        classes = list(set(self.dataset.labels))
+        target_size = self.dataset.get_min_size()
+        for c in classes:
+            df_group, indexes = self.dataset.get_class_instances(c)
+            current_size = len(df_group)
+            if current_size > target_size:
+                q=current_size -target_size
+                to_delete = random.sample(indexes, q)
+                for idx in sorted(to_delete, reverse=True):
+                    del self.dataset.images[idx]
+                    del self.dataset.labels[idx]
 
 
-
-            '''
-            image_datagen = ImageDataGenerator(
-                rotation_range=45,
-                width_shift_range=0.2,
-                height_shift_range=0.2,
-                shear_range=0.2,
-                zoom_range=0.2,
-                horizontal_flip=True,
-                fill_mode='reflect', cval=125)
-
-            image_generator = image_datagen.flow_from_dataframe(
-                dataframe=df_balanced,
-                x_col="img_path",
-                y_col="label",
-                class_mode="categorical",
-                batch_size=4,
-                shuffle=True
-            )
-            '''

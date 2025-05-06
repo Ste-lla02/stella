@@ -162,5 +162,7 @@ class Configuration(metaclass=Singleton):
             self.put('num_epochs', int(temp))
             temp = reader['classification'].get('learning_rate', 1e-4)
             self.put('learning_rate', float(temp))
+            temp = reader['classification'].get('preprocessing','')
+            self.put('preprocessing', str(temp))
         except Exception as s:
             print(s)
