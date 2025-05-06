@@ -63,6 +63,7 @@ def classification(conf: Configuration):
         print('Model instanciated\n')
         best_model = classifier.train()
         print('Trial completed\n')
+        classifier.evaluation_graph()
         #epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
         #print('Test completed\n')
         #classifier.evaluate_multilabels(labels_list, preds_list)

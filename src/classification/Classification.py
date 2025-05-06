@@ -25,7 +25,7 @@ class Classification:
             '2': 'bladder_and_urethra',
             '3': 'other'
         }
-        self.df_name=conf.get('reportcsv')
+        self.df_name=conf.get('reportcsv')+'report_label_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
         self.results=dict()
         self.report=pd.DataFrame(columns=['epoch','phase','loss','class','accuracy','specificity', 'precision','recall','f1_score'])
 
@@ -181,6 +181,7 @@ class Classification:
     def evaluation_graph(self):
         selected_trial = 'validating'
         classes = self.report['class'].unique()
+        trial=selected_trial
         for selected_class in classes:
             class_1 = self.report[(self.report['class'] == selected_class) & (self.report['phase'] == selected_trial)]
             plt.plot(class_1['epoch'], class_1['accuracy'], label='accuracy')
@@ -194,9 +195,16 @@ class Classification:
             plt.xlabel('Epochs')
             plt.ylabel('Metrics')
             plt.legend()
-            directory=self.preprocessing+'_Epoch_'+str(self.num_epochs)
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            plt.savefig('output\\graphs\\'+trial + '_Class_' + selected_class + '.pdf', format='pdf', dpi=600,
-                        bbox_inches='tight', pad_inches=0, transparent=True)
+            directory_name = self.preprocessing + '_epoch_' + str(self.num_epochs)
+            full_path = os.path.join('output', 'graphs', directory_name)
+            if not os.path.exists(full_path):
+                os.makedirs(full_path)
+            plt.savefig(
+                os.path.join(full_path, trial + '_Class_' + selected_class + '.pdf'),
+                format='pdf',
+                dpi=600,
+                bbox_inches='tight',
+                pad_inches=0,
+                transparent=True
+            )
             plt.close()
