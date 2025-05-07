@@ -164,5 +164,15 @@ class Configuration(metaclass=Singleton):
             self.put('learning_rate', float(temp))
             temp = reader['classification'].get('preprocessing','')
             self.put('preprocessing', str(temp))
+            temp = reader['classification'].get('delta', 0.0)
+            self.put('delta', float(temp))
+            temp = reader['classification'].get('patience', 5)
+            self.put('patience', int(temp))
+            temp = reader['classification'].get('verbose', True)
+            temp = temp == 'True'
+            self.put('patience', temp)
+            temp = reader['classification'].get('mask_classifier_path', 'best_model.pth')
+            self.put('mask_classifier_path', str(temp))
+
         except Exception as s:
             print(s)

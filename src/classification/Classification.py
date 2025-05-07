@@ -5,6 +5,56 @@ import copy
 from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
 import matplotlib.pyplot as plt
 import os
+import seaborn as sns
+import torch
+import copy
+
+class EarlyStopping:
+    def __init__(self, patience=5, verbose=False, delta=0.0, path='best_model.pt', trace_func=print):
+        self.patience = patience
+        self.verbose = verbose
+        self.delta = delta
+        self.path = path
+        self.trace_func = trace_func
+
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = torch.tensor(float('inf'))
+        self.best_model_wts = None
+        self.best_epoch = -1
+
+        self.y_true_best = None
+        self.y_pred_best = None
+
+    def __call__(self, val_loss, model, epoch, y_true=None, y_pred=None):
+        score = -val_loss  # Per minimizzare la loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model, epoch, y_true, y_pred)
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            if self.verbose:
+                self.trace_func(f'No improvement in validation loss for {self.counter} epoch(s).')
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model, epoch, y_true, y_pred)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model, epoch, y_true, y_pred):
+        if self.verbose:
+            self.trace_func(f'Validation loss decreased. Saving model at epoch {epoch} ...')
+        self.best_model_wts = copy.deepcopy(model.state_dict())
+        self.best_epoch = epoch
+        self.val_loss_min = val_loss.clone() if isinstance(val_loss, torch.Tensor) else torch.tensor(val_loss)
+        torch.save(self.best_model_wts, self.path)
+        self.y_true_best = y_true
+        self.y_pred_best = y_pred
+
+
 class Classification:
     def __init__(self, model, criterion, optimizer,device,conf, loader):
         self.model = model
@@ -14,11 +64,8 @@ class Classification:
         self.dataset_sizes = loader.dataset_sizes
         self.preprocessing=conf.get('preprocessing')
         self.num_epochs = conf.get('num_epochs')
-        self.best_model_wts = copy.deepcopy(model.state_dict())  # Salva i pesi migliori
-        self.best_acc = 0.0
-        self.best_epoch = 0
         self.device = device
-        self.best_model_path = "best_model.pth"  # Percorso dove salvare il modello migliore
+        self.earlystopping=EarlyStopping(conf)  # Percorso dove salvare il modello migliore
         self.label_dict = {
             '0': 'bladder',
             '1': 'urethra',
@@ -27,15 +74,21 @@ class Classification:
         }
         self.df_name=conf.get('reportcsv')+'report_label_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
         self.results=dict()
-        self.report=pd.DataFrame(columns=['epoch','phase','loss','class','accuracy','specificity', 'precision','recall','f1_score'])
-
+        self.report=pd.DataFrame(columns=['epoch','phase','loss','overall accuracy','class','accuracy','specificity', 'precision','recall','f1_score'])
+        self.train_losses=list()
+        self.validation_losses = list()
+        self.full_graph_path = os.path.join('output', 'graphs', self.preprocessing + '_epoch_' + str(self.num_epochs))
 
     def train(self):
         since = time.time()
         self.model.to(self.device)
         self.model.train()
 
-        for epoch in range(self.num_epochs):
+        epoch = 0
+        check = False
+
+        # TRAINING WITH EPOCHS AND EARLY STOPPING
+        while epoch < self.num_epochs and not check:
             print(f'Epoch {epoch}/{self.num_epochs - 1}')
             print('-' * 10)
 
@@ -64,26 +117,42 @@ class Classification:
 
             epoch_loss = running_loss / self.dataset_sizes['train']
             epoch_acc = running_corrects.double() / self.dataset_sizes['train']
+            epoch_acc = epoch_acc.item()
+            self.train_losses.append(epoch_loss)
             print(f'Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+
             y_true_train = torch.cat(labels_list)
             y_pred_train = torch.cat(preds_list)
-            self.evaluate_multilabels('training',epoch,epoch_loss,y_true_train,y_pred_train)
-            test_loss, test_acc, y_true_test,y_pred_test = self.test(self.model, epoch=epoch)
-            self.evaluate_multilabels('validating', epoch, test_loss, y_true_test, y_pred_test)
+            # TRAINING EVALUATION
+            self.evaluate_multilabels('training', epoch, epoch_loss, epoch_acc, y_true_train, y_pred_train)
 
-            if epoch_acc > self.best_acc:
-                self.best_acc = epoch_acc
-                self.best_model_wts = copy.deepcopy(self.model.state_dict())
-                self.best_epoch = epoch
-                torch.save(self.best_model_wts, self.best_model_path)
-                print(f"Best model saved at epoch {epoch}")
+            # VALIDATION EVALUATION
+            val_loss, val_acc, y_true_test, y_pred_test = self.test(self.model, epoch=epoch)
+            self.validation_losses.append(val_loss)
+            self.evaluate_multilabels('validating', epoch, val_loss, val_acc, y_true_test, y_pred_test)
 
+            # EARLY STOPPING
+            self.earlystopping(torch.tensor(val_loss), self.model, epoch, y_true=y_true_test, y_pred=y_pred_test)
 
+            check = self.earlystopping.early_stop
+            epoch += 1
+
+        if check:
+            print(f"Early stopping at epoch {epoch - 1}")
+
+        # LOAD BEST MODEL
+        self.model.load_state_dict(self.earlystopping.best_model_wts)
+        print(f"Best model from epoch {self.earlystopping.best_epoch} loaded.")
+
+        # FINAL EVALUATION
         time_elapsed = time.time() - since
         print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-        print(f"Best training accuracy: {self.best_acc:.4f} at epoch {self.best_epoch}")
+        print(f"Best validation loss: {-self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}")
+        self.plot_losses()
 
-        self.model.load_state_dict(self.best_model_wts)
+        # CONFUSION MATRIX
+        self.confusion_matrics_graph(self.earlystopping.y_true_best, self.earlystopping.y_pred_best)
+
         return self.model
 
     def test(self, model, epoch=None):
@@ -116,13 +185,15 @@ class Classification:
 
         epoch_loss = running_loss / self.dataset_sizes['test']
         epoch_acc = running_corrects.double() / self.dataset_sizes['test']
+        epoch_acc=epoch_acc.item()
 
         if epoch is not None:
             print(f'Epoch {epoch} - Test Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
         else:
             print(f'Test Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
-        return epoch_loss, epoch_acc, all_preds, all_labels
+        return epoch_loss, epoch_acc, all_labels, all_preds
+
 
 
 
@@ -143,7 +214,7 @@ class Classification:
 
         return sensitivity, specificity, accuracy
 
-    def evaluate_multilabels(self, trial,epoch,loss,y_true, y_pred):
+    def evaluate_multilabels(self, trial,epoch,loss,overall_accuracy,y_true, y_pred):
         mcm = multilabel_confusion_matrix(y_true, y_pred)
         metrics = dict()
         for idx, label_mcm in enumerate(mcm):
@@ -172,6 +243,7 @@ class Classification:
             row['phase'] = trial
             row['epoch'] = epoch
             row['loss'] = loss
+            row['overall accuracy']=overall_accuracy
             row['class'] = key
             row.update(values)
             self.report.loc[len(self.report)] = row
@@ -179,6 +251,9 @@ class Classification:
         return metrics
 
     def evaluation_graph(self):
+
+        if not os.path.exists(self.full_graph_path):
+            os.makedirs(self.full_graph_path)
         selected_trial = 'validating'
         classes = self.report['class'].unique()
         trial=selected_trial
@@ -195,12 +270,8 @@ class Classification:
             plt.xlabel('Epochs')
             plt.ylabel('Metrics')
             plt.legend()
-            directory_name = self.preprocessing + '_epoch_' + str(self.num_epochs)
-            full_path = os.path.join('output', 'graphs', directory_name)
-            if not os.path.exists(full_path):
-                os.makedirs(full_path)
             plt.savefig(
-                os.path.join(full_path, trial + '_Class_' + selected_class + '.pdf'),
+                os.path.join(self.full_graph_path, trial + '_Class_' + selected_class + '.pdf'),
                 format='pdf',
                 dpi=600,
                 bbox_inches='tight',
@@ -208,3 +279,53 @@ class Classification:
                 transparent=True
             )
             plt.close()
+
+
+
+    def confusion_matrics_graph(self,y_true, y_pred):
+        if not os.path.exists(self.full_graph_path):
+            os.makedirs(self.full_graph_path)
+
+        for idx, class_name in self.label_dict.items():
+            y_true_binary = (y_true == int(idx)).astype(int)
+            y_pred_binary = (y_pred == int(idx)).astype(int)
+            id_number=str(int(idx)+1)
+            cm = confusion_matrix(y_true_binary, y_pred_binary)
+            plt.figure(figsize=(4, 4))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+                        xticklabels=['not class ' + id_number, 'class '+id_number],
+                        yticklabels=['not class ' + id_number, 'class '+id_number])
+            plt.title(f'Confusion Matrix Class: {id_number}')
+            plt.ylabel('True label')
+            plt.xlabel('Predicted label')
+
+
+            filename = os.path.join(self.full_graph_path, f"confusion_matrix_{class_name}.pdf")
+            plt.savefig(filename,format='pdf',
+                dpi=600,
+                bbox_inches='tight',
+                pad_inches=0,
+                transparent=True)
+
+            plt.close()
+
+
+
+    def plot_losses(self):
+        if not os.path.exists(self.full_graph_path):
+            os.makedirs(self.full_graph_path)
+        plt.figure(figsize=(8, 5))
+        plt.plot(self.train_losses, label='Training Loss', color='blue', marker='-')
+        plt.plot(self.validation_losses, label='Validation Loss', color='orange', marker='-')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training and Validation Loss')
+        plt.legend()
+        filename = os.path.join(self.full_graph_path, f"losses_graph.pdf")
+        plt.savefig(filename, format='pdf',
+                    dpi=600,
+                    bbox_inches='tight',
+                    pad_inches=0,
+                    transparent=True)
+
+        plt.close()
