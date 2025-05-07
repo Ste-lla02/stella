@@ -10,12 +10,12 @@ import torch
 import copy
 
 class EarlyStopping:
-    def __init__(self, patience=5, verbose=False, delta=0.0, path='best_model.pt', trace_func=print):
-        self.patience = patience
-        self.verbose = verbose
-        self.delta = delta
-        self.path = path
-        self.trace_func = trace_func
+    def __init__(self,conf):
+        self.patience = conf.get('patience')
+        self.verbose = conf.get('verbose')
+        self.delta = conf.get('delta')
+        self.path = conf.get('mask_classifier_path')
+        self.trace_func = print
 
         self.counter = 0
         self.best_score = None
@@ -76,7 +76,9 @@ class Classification:
         self.results=dict()
         self.report=pd.DataFrame(columns=['epoch','phase','loss','overall accuracy','class','accuracy','specificity', 'precision','recall','f1_score'])
         self.train_losses=list()
+        self.train_acc=list()
         self.validation_losses = list()
+        self.validation_acc=list()
         self.full_graph_path = os.path.join('output', 'graphs', self.preprocessing + '_epoch_' + str(self.num_epochs))
 
     def train(self):
@@ -119,6 +121,7 @@ class Classification:
             epoch_acc = running_corrects.double() / self.dataset_sizes['train']
             epoch_acc = epoch_acc.item()
             self.train_losses.append(epoch_loss)
+            self.train_acc.append(epoch_acc)
             print(f'Train Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
             y_true_train = torch.cat(labels_list)
@@ -129,10 +132,11 @@ class Classification:
             # VALIDATION EVALUATION
             val_loss, val_acc, y_true_test, y_pred_test = self.test(self.model, epoch=epoch)
             self.validation_losses.append(val_loss)
+            self.validation_acc.append(val_acc)
             self.evaluate_multilabels('validating', epoch, val_loss, val_acc, y_true_test, y_pred_test)
 
             # EARLY STOPPING
-            self.earlystopping(torch.tensor(val_loss), self.model, epoch, y_true=y_true_test, y_pred=y_pred_test)
+            self.earlystopping(torch.tensor(epoch_loss), self.model, epoch, y_true=y_true_test, y_pred=y_pred_test)
 
             check = self.earlystopping.early_stop
             epoch += 1
@@ -315,8 +319,8 @@ class Classification:
         if not os.path.exists(self.full_graph_path):
             os.makedirs(self.full_graph_path)
         plt.figure(figsize=(8, 5))
-        plt.plot(self.train_losses, label='Training Loss', color='blue', marker='-')
-        plt.plot(self.validation_losses, label='Validation Loss', color='orange', marker='-')
+        plt.plot(self.train_losses, label='Training Loss', color='blue', marker='o')
+        plt.plot(self.validation_losses, label='Validation Loss', color='orange', marker='o')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Training and Validation Loss')
@@ -328,4 +332,15 @@ class Classification:
                     pad_inches=0,
                     transparent=True)
 
+        plt.close()
+        plt.figure(figsize=(8, 5))
+        plt.plot(self.train_acc, label='Training Accuracy', color='blue', marker='o')
+        plt.plot(self.validation_acc, label='Validation Accuracy', color='orange', marker='o')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.tick_params(axis='y', labelcolor='black')
+        plt.legend()
+        plt.title('Training and Validation Accuracy')
+        filename = os.path.join(self.full_graph_path, f"accuracy_graph.pdf")
+        plt.savefig(filename, format='pdf', dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
         plt.close()

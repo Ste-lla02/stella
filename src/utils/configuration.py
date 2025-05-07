@@ -170,7 +170,7 @@ class Configuration(metaclass=Singleton):
             self.put('patience', int(temp))
             temp = reader['classification'].get('verbose', True)
             temp = temp == 'True'
-            self.put('patience', temp)
+            self.put('verbose', temp)
             temp = reader['classification'].get('mask_classifier_path', 'best_model.pth')
             self.put('mask_classifier_path', str(temp))
 
