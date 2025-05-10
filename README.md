@@ -23,18 +23,18 @@ Please cite our work if you find it useful for your research and work.
 The code relies on the following Python 3.9 + libs.
 
 Packages needed are:
-*torch 2.6.0
-*torchvision 0.21.0
-*matplotlib 3.9.4
-*pandas 2.2.3
-*numpy 1.26.4
-*opencv-python 4.11.0.86
-*ipython 8.15.0
-*scikit-learn 1.6.1
-*Pillow 11.1.0
-*tensorflow 2.19.0
-*keras 3.9.2
-*pytorch-cuda 11.8 
-*seaborn 0.13.2
+* torch 2.6.0
+* torchvision 0.21.0
+* matplotlib 3.9.4
+* pandas 2.2.3
+* numpy 1.26.4
+* opencv-python 4.11.0.86
+* ipython 8.15.0
+* scikit-learn 1.6.1
+* Pillow 11.1.0
+* tensorflow 2.19.0
+* keras 3.9.2
+* pytorch-cuda 11.8 
+* seaborn 0.13.2
 git clone https://github.com/facebookresearch/segment-anything.git
 wget -O models/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
