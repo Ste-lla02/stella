@@ -1,6 +1,6 @@
 # STELLA - Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas
 This repository is the official code for the paper "Toward Paediatric Digital Twins: STELLA-Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas" by Roberta De Fazio, Maria Stella de Biase, Pierluigi Marzuillo, Paola Tirelli, Fiammetta Marulli, Stefano Marrone, Laura Verde.
-![Workflow]([https://github.com/](https://github.com/Ste-lla02/stella/blob/roberta/Figures/stella_pipeline.pdf))
+![Workflow]([https://github.com/](Ste-lla02/stella/blob/roberta/Figures/stella_pipeline.pdf))
 ## Citation
 Please cite our work if you find it useful for your research and work.
 
@@ -49,12 +49,28 @@ wget -O models/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anyth
 ```
 
 ## Execution
-* Set your parameters in configuration.ini
-* Create a root folder as the working directory with all the required subfolders, as follows:
-  ### Folder Structure Setup
-
+### Parameters configuration in configuration.ini
+### Folder Structure Setup
 To initialize the required folder structure for the project, run the following commands in your terminal:
 
 ```bash
-mkdir -p experiments/img/dump experiments/img/test experiments/input experiments/output experiments/models
+mkdir -p experiments/img/dumps experiments/img/test experiments/img/preprocessed experiments/img/masks experiments/input experiments/output/models experiments/output/report_labels experiments/models
+```
+### Preprocessing & Mask Generation
+To run preprocessing and SAM models on the image:
+```bash
+python3 main.py configuration.ini classification
+```
+### Labelling
+To run Dobby tool for masks labelling:
+```bash
+python3 main.py configuration.ini process
+```
+
+### Augmentation & Classification
+Remember to set "augmentation" in section [classification] under keyword "preprocessing:" in configuration.ini
+
+To run Augmentation and masks Classification:
+```bash
+python3 main.py configuration.ini classification
 ```
