@@ -1,6 +1,6 @@
 # STELLA - Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas
 This repository is the official code for the paper "Toward Paediatric Digital Twins: STELLA-Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas" by Roberta De Fazio, Maria Stella de Biase, Pierluigi Marzuillo, Paola Tirelli, Fiammetta Marulli, Stefano Marrone, Laura Verde.
-
+![Workflow](https://github.com/)
 ## Citation
 Please cite our work if you find it useful for your research and work.
 
@@ -36,5 +36,8 @@ Packages needed are:
 * keras 3.9.2
 * pytorch-cuda 11.8 
 * seaborn 0.13.2
+
+  
+The SAM2 model can be downloaded and integrated according to the following instructions:
 git clone https://github.com/facebookresearch/segment-anything.git
 wget -O models/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
