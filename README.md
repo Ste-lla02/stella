@@ -1,6 +1,6 @@
 # STELLA - Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas
 This repository is the official code for the paper "Toward Paediatric Digital Twins: STELLA-Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas" by Roberta De Fazio, Maria Stella de Biase, Pierluigi Marzuillo, Paola Tirelli, Fiammetta Marulli, Stefano Marrone, Laura Verde.
-![Workflow](https://github.com/)
+![Workflow]([https://github.com/](https://github.com/Ste-lla02/stella/blob/roberta/Figures/stella_pipeline.pdf))
 ## Citation
 Please cite our work if you find it useful for your research and work.
 
@@ -38,6 +38,23 @@ Packages needed are:
 * seaborn 0.13.2
 
   
-The SAM2 model can be downloaded and integrated according to the following instructions:
+### Download and Integration of the SAM2 Model
+
+To download and set up the SAM2 model, follow these steps:
+
+```bash
 git clone https://github.com/facebookresearch/segment-anything.git
+
 wget -O models/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+```
+
+## Execution
+* Set your parameters in configuration.ini
+* Create a root folder as the working directory with all the required subfolders, as follows:
+  ### Folder Structure Setup
+
+To initialize the required folder structure for the project, run the following commands in your terminal:
+
+```bash
+mkdir -p experiments/img/dump experiments/img/test experiments/input experiments/output experiments/models
+```
