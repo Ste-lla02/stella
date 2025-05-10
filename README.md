@@ -1,6 +1,6 @@
 # STELLA - Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas
 This repository is the official code for the paper "Toward Paediatric Digital Twins: STELLA-Segmentation Tool for Enhanced Localisation and Labelling of diagnostic Areas" by Roberta De Fazio, Maria Stella de Biase, Pierluigi Marzuillo, Paola Tirelli, Fiammetta Marulli, Stefano Marrone, Laura Verde.
-![Workflow]([https://github.com/](Ste-lla02/stella/blob/roberta/Figures/stella_pipeline.pdf))
+![Workflow](https://github.com/Ste-lla02/stella/blob/roberta/Figures/stella_pipeline.pdf)
 ## Citation
 Please cite our work if you find it useful for your research and work.
 
