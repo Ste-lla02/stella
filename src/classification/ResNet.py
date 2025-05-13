@@ -4,9 +4,10 @@ from torchvision import models
 import torch
 class ResNet():
 
-    def __init__(self,conf,loader):
+    def __init__(self,conf,loader,task):
         self.conf=conf
         self.loader=loader
+        self.task=task
         self.criterion=None
         self.optimizer=None
         self.model=None
@@ -19,4 +20,4 @@ class ResNet():
         model.fc = nn.Linear(512, self.loader.dataset.get_num_classes())
         self.model = model.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(model.parameters(), lr=self.conf.get('learning_rate'))
+        self.optimizer = optim.SGD(model.parameters(), lr=self.conf.get(self.task+'_learning_rate'))

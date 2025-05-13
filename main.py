@@ -8,7 +8,8 @@ from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error
 from src.labelling.labeler import Dobby
 from src.classification.mask_loader import Mask_Loader
 from src.classification.image_loader import Image_Loader
-from src.classification.Classification import Classification
+from src.classification.classification import Classification
+from src.classification.prediction import Prediction
 from src.classification.ResNet import ResNet
 import torch
 
@@ -47,11 +48,11 @@ def classification(conf: Configuration):
     try:
         send_ntfy_start(topic,'classificiation')
         torch.manual_seed(1)
-        loader = Mask_Loader(conf)
+        loader = Mask_Loader(conf,'classification')
         loader.load_data()
-        resnet=ResNet(conf,loader)
+        resnet=ResNet(conf,loader,'classification')
         resnet()
-        classifier = Classification(resnet.model, resnet.criterion, resnet.optimizer,resnet.device,conf,loader)
+        classifier = Classification(resnet.model, resnet.criterion, resnet.optimizer,resnet.device,conf,loader,'classification')
         best_model = classifier.train()
         classifier.evaluation_graph()
         #epoch_acc, labels_list, preds_list = classifier.test(best_model, loader.test_loader)
@@ -75,13 +76,18 @@ def clean(conf: Configuration):
 
 
 def prediction(conf: Configuration):
-    loader=Image_Loader(conf)
+    topic = conf.get('ntfy_topic')
+    send_ntfy_start(topic, 'prediction')
+    torch.manual_seed(1)
+    loader=Image_Loader(conf,'prediction')
     loader.load_data()
-    resnet = ResNet(conf, loader)
+    resnet = ResNet(conf, loader,'prediction')
     resnet()
-    classifier = Classification(resnet.model, resnet.criterion, resnet.optimizer, resnet.device, conf, loader)
-    best_model = classifier.train()
-    classifier.evaluation_graph()
+    predictor = Prediction(resnet.model, resnet.criterion, resnet.optimizer, resnet.device, conf, loader,'prediction')
+    best_model = predictor.train()
+    predictor.evaluation_graph()
+    send_ntfy_notification(topic)
+
 
     pass
 

@@ -1,20 +1,22 @@
 import pandas as pd
-import torch
+from src.utils.utils import *
 import time
-import copy
+from abc import ABC, abstractmethod
 from sklearn.metrics import multilabel_confusion_matrix,confusion_matrix, accuracy_score, recall_score, roc_auc_score
 import matplotlib.pyplot as plt
 import os
 import seaborn as sns
 import torch
 import copy
+from pathlib import Path
 
 class EarlyStopping:
-    def __init__(self,conf):
-        self.patience = conf.get('patience')
-        self.verbose = conf.get('verbose')
-        self.delta = conf.get('delta')
-        self.path = conf.get('mask_classifier_path')
+    def __init__(self,conf,task):
+        self.task=task
+        self.patience = conf.get(self.task+'_patience')
+        self.verbose = conf.get(self.task+'_verbose')
+        self.delta = conf.get(self.task+'_delta')
+        self.path = conf.get(self.task+'_model_path')
         self.trace_func = print
 
         self.counter = 0
@@ -55,31 +57,29 @@ class EarlyStopping:
         self.y_pred_best = y_pred
 
 
-class Classification:
-    def __init__(self, model, criterion, optimizer,device,conf, loader):
+class Model:
+    def __init__(self, model, criterion, optimizer,device,conf, loader,task):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
         self.loader = loader
+        self.task=task
         self.dataset_sizes = loader.dataset_sizes
-        self.preprocessing=conf.get('classification_preprocessing')
-        self.num_epochs = conf.get('num_epochs')
+        self.preprocessing=conf.get(self.task+'_preprocessing')
+        self.num_epochs = conf.get(self.task+'_num_epochs')
         self.device = device
-        self.earlystopping=EarlyStopping(conf)  # Percorso dove salvare il modello migliore
-        self.label_dict = {
-            '0': 'bladder',
-            '1': 'urethra',
-            '2': 'bladder_and_urethra',
-            '3': 'other'
-        }
-        self.df_name=conf.get('reportcsv')+'report_label_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
+        self.earlystopping=EarlyStopping(conf,self.task)
+        self.df_path=os.path.join(conf.get('reportcsv'),self.task)
+        create_folder(self.df_path)
+        self.df_name=self.df_path+'\\report_label_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
         self.results=dict()
         self.report=pd.DataFrame(columns=['epoch','phase','loss','overall accuracy','class','accuracy','specificity', 'precision','recall','f1_score'])
         self.train_losses=list()
         self.train_acc=list()
         self.validation_losses = list()
         self.validation_acc=list()
-        self.full_graph_path = os.path.join('output', 'graphs', self.preprocessing + '_epoch_' + str(self.num_epochs))
+        self.full_graph_path = os.path.join('output', 'graphs',self.task, self.preprocessing + '_epoch_' + str(self.num_epochs))
+        create_folder(self.full_graph_path)
 
     def train(self):
         since = time.time()
@@ -127,13 +127,13 @@ class Classification:
             y_true_train = torch.cat(labels_list)
             y_pred_train = torch.cat(preds_list)
             # TRAINING EVALUATION
-            self.evaluate_multilabels('training', epoch, epoch_loss, epoch_acc, y_true_train, y_pred_train)
+            self.evaluate('training', epoch, epoch_loss, epoch_acc, y_true_train, y_pred_train)
 
             # VALIDATION EVALUATION
             val_loss, val_acc, y_true_test, y_pred_test = self.test(self.model, epoch=epoch)
             self.validation_losses.append(val_loss)
             self.validation_acc.append(val_acc)
-            self.evaluate_multilabels('validating', epoch, val_loss, val_acc, y_true_test, y_pred_test)
+            self.evaluate('validating', epoch, val_loss, val_acc, y_true_test, y_pred_test)
 
             # EARLY STOPPING
             self.earlystopping(torch.tensor(epoch_loss), self.model, epoch, y_true=y_true_test, y_pred=y_pred_test)
@@ -200,59 +200,9 @@ class Classification:
 
 
 
-
-    def evaluate(self, test_labels, test_preds):
-        cm = multilabel_confusion_matrix(test_labels, test_preds)
-        tn, fp, fn, tp = cm.ravel()
-
-        accuracy = accuracy_score(test_labels, test_preds)
-        sensitivity = recall_score(test_labels, test_preds)
-        specificity = tn / (tn + fp) if (tn + fp) != 0 else 0
-        roc_auc = roc_auc_score(test_labels, test_preds)
-
-        print(f'Accuracy: {accuracy:.4f}')
-        print(f'Sensitivity (Recall): {sensitivity:.4f}')
-        print(f'Specificity: {specificity:.4f}')
-        print(f'ROC AUC: {roc_auc:.4f}')
-        print(f'Confusion Matrix:\n{cm}')
-
-        return sensitivity, specificity, accuracy
-
-    def evaluate_multilabels(self, trial,epoch,loss,overall_accuracy,y_true, y_pred):
-        mcm = multilabel_confusion_matrix(y_true, y_pred)
-        metrics = dict()
-        for idx, label_mcm in enumerate(mcm):
-            label_name = self.label_dict[str(idx)]
-
-
-            TP = label_mcm[1, 1]
-            TN = label_mcm[0, 0]
-            FP = label_mcm[0, 1]
-            FN = label_mcm[1, 0]
-
-            precision = TP / (TP + FP) if (TP + FP) != 0 else 0
-            recall = TP / (TP + FN) if (TP + FN) != 0 else 0
-            specificity = TN / (TN + FP) if (TN + FP) != 0 else 0
-            accuracy = (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) != 0 else 0
-            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
-            metrics[label_name] = {
-                'accuracy': accuracy,
-                'specificity': specificity,
-                'precision': precision,
-                'recall': recall,
-                'f1_score': f1
-            }
-        for key, values in metrics.items():
-            row = dict()
-            row['phase'] = trial
-            row['epoch'] = epoch
-            row['loss'] = loss
-            row['overall accuracy']=overall_accuracy
-            row['class'] = key
-            row.update(values)
-            self.report.loc[len(self.report)] = row
-        self.report.to_csv(self.df_name, index=False, sep=';')
-        return metrics
+    @abstractmethod
+    def evaluate(self, trial,epoch,loss,overall_accuracy,y_true, y_pred):
+       pass
 
     def evaluation_graph(self):
 

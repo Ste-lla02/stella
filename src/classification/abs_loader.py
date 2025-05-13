@@ -4,6 +4,7 @@ from torchvision import transforms
 from src.core.core_model import State
 from torch.utils.data import Dataset
 from torch.utils.data import random_split
+import random
 
 class MaskDataset(Dataset):
     def __init__(self, images, labels):
@@ -81,13 +82,14 @@ class MaskDataset(Dataset):
         self.labels.append(label)
 
 class AbstractLoader(ABC):
-    def __init__(self, conf):
+    def __init__(self, conf,task):
         self.configuration = conf
         self.manager = State(conf)
         self.dataset = self.load_mask_dataset()  # chiamerà quello definito nella sottoclasse
         self.train_loader = None
         self.test_loader = None
         self.dataset_sizes = None
+        self.task=task
         self.functions = {
             'augmentation': self.augmentation,
             'undersampling': self.undersampling,
@@ -100,11 +102,12 @@ class AbstractLoader(ABC):
 
 
     def load_data(self):
-        self.preprocessing = self.configuration.get('classification_preprocessing')
+        self.preprocessing = self.configuration.get(self.task+'_preprocessing')
         self.functions.get(self.preprocessing)()
         for c in range(0, self.dataset.get_num_classes()):
             print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
-        test_size = int(len(self.dataset.images) * 0.2)
+        test_size=self.configuration.get(self.task+'_test_split')
+        test_size = int(len(self.dataset.images) * test_size)
         train_size = len(self.dataset.images) - test_size
         train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
         index_train = train_dataset.indices
@@ -117,10 +120,48 @@ class AbstractLoader(ABC):
         self.test_loader = MaskDataset(X_test, Y_test)
         self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
 
-    @abstractmethod
-    def augmentation(self):
-        pass
+    def image_generator(self, image, label, n):
+        rotation = self.configuration.get('rotation_range')
+        p_hor = self.configuration.get('flip_hor_probability')
+        p_ver = self.configuration.get('flip_ver_probability')
+        new_images = list()
+        transformer = transforms.Compose([
+            transforms.RandomHorizontalFlip(p=p_hor),
+            transforms.RandomRotation(degrees=(0, rotation)),
+            transforms.RandomVerticalFlip(p=p_ver)
+        ])
+        for i in range(n):
+            result = transformer(image)
+            new_images.append(result)
+            self.dataset.add_new_instances(result, label)
 
-    @abstractmethod
+        return new_images
+
+    def augmentation(self):
+        classes = list(set(self.dataset.labels))
+        target_size = self.dataset.get_max_size()
+        for c in classes:
+            df_group, indexes = self.dataset.get_class_instances(c)
+            current_size = len(df_group)
+
+            if current_size < target_size:
+                q, r = divmod(target_size, current_size)
+                # combinations=[(random.choice(rotation), random.choice(width), random.choice(height)) for _ in range(repeat)]
+                for index in indexes:
+                    self.image_generator(self.dataset.images[index], int(c), q)
+                for i in range(r):
+                    chosen=random.choice(indexes)
+                    self.image_generator(self.dataset.images[chosen], int(c), 0)
+
     def undersampling(self):
-        pass
+        classes = list(set(self.dataset.labels))
+        target_size = self.dataset.get_min_size()
+        for c in classes:
+            df_group, indexes = self.dataset.get_class_instances(c)
+            current_size = len(df_group)
+            if current_size > target_size:
+                q = current_size - target_size
+                to_delete = random.sample(indexes, q)
+                for idx in sorted(to_delete, reverse=True):
+                    del self.dataset.images[idx]
+                    del self.dataset.labels[idx]

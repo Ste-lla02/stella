@@ -1,6 +1,7 @@
 from src.utils.configuration import Configuration
 import shutil, os, getpass, socket, numpy as np, cv2, requests
 from PIL import Image
+from pathlib import Path
 
 def leq(a: float, b: float) -> bool:
     return a <= b
@@ -74,7 +75,8 @@ def send_ntfy_warning(topic, image_name, error):
     else:
         print(f"Failed to send notification: {response.text}")
 
-
+def create_folder(path_string):
+    Path(path_string).mkdir(parents=True, exist_ok=True)
 class FileCleaner():
     folder_register = {
         'image': ('clean_images',['maskfolder', 'preprocessedfolder']),
