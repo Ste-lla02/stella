@@ -7,6 +7,7 @@ from src.utils.configuration import Configuration
 from src.utils.utils import FileCleaner, send_ntfy_notification, send_ntfy_error,send_ntfy_start
 from src.labelling.labeler import Dobby
 from src.classification.mask_loader import Mask_Loader
+from src.classification.image_loader import Image_Loader
 from src.classification.Classification import Classification
 from src.classification.ResNet import ResNet
 import torch
@@ -74,6 +75,14 @@ def clean(conf: Configuration):
 
 
 def prediction(conf: Configuration):
+    loader=Image_Loader(conf)
+    loader.load_data()
+    resnet = ResNet(conf, loader)
+    resnet()
+    classifier = Classification(resnet.model, resnet.criterion, resnet.optimizer, resnet.device, conf, loader)
+    best_model = classifier.train()
+    classifier.evaluation_graph()
+
     pass
 
 

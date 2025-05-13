@@ -3,6 +3,7 @@ import torch
 from torchvision import transforms
 from src.core.core_model import State
 from torch.utils.data import Dataset
+from torch.utils.data import random_split
 
 class MaskDataset(Dataset):
     def __init__(self, images, labels):
@@ -11,6 +12,7 @@ class MaskDataset(Dataset):
         self.labels = labels
         self.mean, self.std=self.compute_mean_std()
         self.transform  = transforms.Compose([
+            transforms.Grayscale(num_output_channels=1),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=self.mean, std=self.std),
@@ -26,13 +28,14 @@ class MaskDataset(Dataset):
 
         if self.transform:
             x = self.transform(x)
-        y = torch.tensor([y-1], dtype=torch.long)
+        y = torch.tensor([y], dtype=torch.long)
         return x, y
 
     def compute_mean_std(self):
         means=[]
         stds= []
         transform_no_norm = transforms.Compose([
+            transforms.Grayscale(num_output_channels=1),
             transforms.Resize((224, 224)),
             transforms.ToTensor()
         ])
@@ -94,6 +97,25 @@ class AbstractLoader(ABC):
     @abstractmethod
     def load_mask_dataset(self):
         pass
+
+
+    def load_data(self):
+        self.preprocessing = self.configuration.get('classification_preprocessing')
+        self.functions.get(self.preprocessing)()
+        for c in range(0, self.dataset.get_num_classes()):
+            print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
+        test_size = int(len(self.dataset.images) * 0.2)
+        train_size = len(self.dataset.images) - test_size
+        train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
+        index_train = train_dataset.indices
+        X_train = [self.dataset.images[i] for i in index_train]
+        Y_train = [self.dataset.labels[i] for i in index_train]
+        index_test = test_dataset.indices
+        X_test = [self.dataset.images[i] for i in index_test]
+        Y_test = [self.dataset.labels[i] for i in index_test]
+        self.train_loader = MaskDataset(X_train, Y_train)
+        self.test_loader = MaskDataset(X_test, Y_test)
+        self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
 
     @abstractmethod
     def augmentation(self):

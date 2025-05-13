@@ -28,6 +28,7 @@ class State:
             self.images[image_name]['masks'] = list()
             self.images[image_name]['preprocessed'] = None
 
+
     def make_overall_image(self, image_name, masks):
         blended = None
         base_image = self.get_original(image_name)
@@ -49,6 +50,17 @@ class State:
             else:
                 blended = overlay
         return blended
+
+    def make_masks_overlay(self, masks):
+        h, w = masks[0]['segmentation'].shape
+        overlay = np.zeros((h, w, 3), dtype=np.uint8)  # Immagine nera di base
+
+        for mask in masks:
+            mask_img = mask['segmentation'].astype(np.uint8)
+            color = [255, 255, 255]  # BIANCO
+            overlay[mask_img > 0] = color
+
+        return overlay
 
     def remove(self, image_name: str):
         del self.images[image_name]
