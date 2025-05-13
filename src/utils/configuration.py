@@ -163,7 +163,7 @@ class Configuration(metaclass=Singleton):
             temp = reader['classification'].get('learning_rate', 1e-4)
             self.put('learning_rate', float(temp))
             temp = reader['classification'].get('preprocessing','')
-            self.put('preprocessing', str(temp))
+            self.put('classification_preprocessing', str(temp))
             temp = reader['classification'].get('delta', 0.0)
             self.put('delta', float(temp))
             temp = reader['classification'].get('patience', 5)

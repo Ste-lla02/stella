@@ -1,102 +1,11 @@
-import torch
 from torchvision import transforms
 from torch.utils.data import random_split
-from src.core.core_model import State
-from torch.utils.data import Dataset
 from src.utils.utils import cv2_to_pil
 import random
-
-class MaskDataset(Dataset):
-    def __init__(self, images, labels):
-        self.images = images
-        #check 44 from wherw
-        self.labels = labels
-        self.mean, self.std=self.compute_mean_std()
-        self.transform  = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=self.mean, std=self.std),
-            transforms.Lambda(lambda x: x.unsqueeze(0)),
-        ])
-
-    def __len__(self):
-        return len(self.images)
-
-    def __getitem__(self, idx):
-        x = self.images[idx]
-        y = self.labels[idx]
-
-        if self.transform:
-            x = self.transform(x)
-        y = torch.tensor([y-1], dtype=torch.long)
-        return x, y
-
-    def compute_mean_std(self):
-        means=[]
-        stds= []
-        transform_no_norm = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor()
-        ])
-
-        for img in self.images:
-            tensor = transform_no_norm(img)  # (C, H, W)
-            means.append(tensor.mean(dim=(1, 2)))  # media per canale
-            stds.append(tensor.std(dim=(1, 2)))    # std per canale
-
-        mean = torch.stack(means).mean(dim=0)  # (3,)
-        std = torch.stack(stds).mean(dim=0)    # (3,)
-        return mean.tolist(), std.tolist()
+from src.classification.abs_loader import AbstractLoader, MaskDataset
 
 
-    def get_num_classes(self):
-        classes=list(set(self.labels))
-        return len(classes)
-
-    def get_class_instances(self, class_id):
-        indexes_class=[i for i, val in enumerate(self.labels) if val==class_id]
-        subset=[self.images[i] for i in indexes_class]
-        return subset,indexes_class
-
-    def get_max_size(self):
-        classes = list(set(self.labels))
-        max=0
-        for c in classes:
-            dim=len(self.get_class_instances(c)[0])
-            if(dim>max):
-                max=dim
-        return max
-
-    def get_min_size(self):
-        classes = list(set(self.labels))
-        min=len(self.labels)
-        for c in classes:
-            dim=len(self.get_class_instances(c)[0])
-            if(dim<min):
-                min=dim
-        return min
-    def add_new_instances(self,image, label):
-        self.images.append(image)
-        self.labels.append(label)
-
-
-
-class Loader():
-    def __init__(self,conf):
-        self.configuration = conf
-        #self.lables_csv=pd.read_csv(self.configuration.get('lablescsv'),sep=';')
-        self.manager=State(conf)
-        self.dataset=self.load_mask_dataset()
-        self.train_loader=None
-        self.test_loader=None
-        self.dataset_sizes=None
-        self.preprocessing=conf.get('preprocessing')
-        self.functions = {
-            'augmentation': self.augmentation,
-            'undersampling': self.undersampling,
-            '':lambda: None
-        }
-
+class Mask_Loader(AbstractLoader):
     def load_mask_dataset(self):
         self.manager.load_pickle()
         X=list()
@@ -113,6 +22,7 @@ class Loader():
         return MaskDataset(X,Y)
 
     def load_data(self):
+        self.preprocessing = self.configuration.get('classification_preprocessing')
         self.functions.get(self.preprocessing)()
         for c in range(1,self.dataset.get_num_classes()+1):
             print('Class '+str(c)+' number samples '+str(len(self.dataset.get_class_instances(c)[1])))

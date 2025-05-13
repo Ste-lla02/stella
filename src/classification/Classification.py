@@ -62,7 +62,7 @@ class Classification:
         self.optimizer = optimizer
         self.loader = loader
         self.dataset_sizes = loader.dataset_sizes
-        self.preprocessing=conf.get('preprocessing')
+        self.preprocessing=conf.get('classification_preprocessing')
         self.num_epochs = conf.get('num_epochs')
         self.device = device
         self.earlystopping=EarlyStopping(conf)  # Percorso dove salvare il modello migliore
