@@ -80,6 +80,7 @@ class Model:
         self.validation_acc=list()
         self.full_graph_path = os.path.join('output', 'graphs',self.task, self.preprocessing + '_epoch_' + str(self.num_epochs))
         create_folder(self.full_graph_path)
+        self.performance_report=open(self.df_path+'\\performance_report.txt','w')
 
     def train(self):
         since = time.time()
@@ -142,16 +143,17 @@ class Model:
             epoch += 1
 
         if check:
-            print(f"Early stopping at epoch {epoch - 1}")
+            self.performance_report.write(f"Early stopping at epoch {epoch - 1}")
 
         # LOAD BEST MODEL
         self.model.load_state_dict(self.earlystopping.best_model_wts)
-        print(f"Best model from epoch {self.earlystopping.best_epoch} loaded.")
+        self.performance_report.write(f"Best model from epoch {self.earlystopping.best_epoch} loaded.")
 
         # FINAL EVALUATION
         time_elapsed = time.time() - since
-        print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-        print(f"Best validation loss: {-self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}")
+        self.performance_report.write(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
+        self.performance_report.write(f"Best validation loss: {-self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}")
+        self.performance_report.close()
         self.plot_losses()
 
         # CONFUSION MATRIX

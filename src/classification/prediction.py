@@ -6,6 +6,10 @@ from src.utils.utils import *
 class Prediction(Model):
 
     def evaluate(self, trial, epoch, loss, overall_accuracy, y_true, y_pred):
+        self.label_dict = {
+            '0': 'no PUV',
+            '1': 'PUV'
+        }
         cm =confusion_matrix(y_true, y_pred)
         tn, fp, fn, tp = cm.ravel()
 
