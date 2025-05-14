@@ -6,7 +6,7 @@ from src.utils.utils import *
 class Prediction(Model):
 
     def evaluate(self, trial, epoch, loss, overall_accuracy, y_true, y_pred):
-        cm = multilabel_confusion_matrix(y_true, y_pred)
+        cm =confusion_matrix(y_true, y_pred)
         tn, fp, fn, tp = cm.ravel()
 
         accuracy = accuracy_score(y_true, y_pred)

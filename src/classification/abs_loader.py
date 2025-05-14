@@ -148,10 +148,10 @@ class AbstractLoader(ABC):
                 q, r = divmod(target_size, current_size)
                 # combinations=[(random.choice(rotation), random.choice(width), random.choice(height)) for _ in range(repeat)]
                 for index in indexes:
-                    self.image_generator(self.dataset.images[index], int(c), q)
+                    self.image_generator(self.dataset.images[index], int(c), q-1)
                 for i in range(r):
                     chosen=random.choice(indexes)
-                    self.image_generator(self.dataset.images[chosen], int(c), 0)
+                    self.image_generator(self.dataset.images[chosen], int(c), 1)
 
     def undersampling(self):
         classes = list(set(self.dataset.labels))
