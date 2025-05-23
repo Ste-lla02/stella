@@ -47,7 +47,7 @@ def build(conf: Configuration):
 def classification(conf: Configuration):
     topic = conf.get('ntfy_topic')
     try:
-        send_ntfy_start(topic,'classificiation')
+        send_ntfy_start(topic,'classification')
         torch.manual_seed(1)
         loader = Mask_Loader(conf,'classification')
         loader.load_data()
