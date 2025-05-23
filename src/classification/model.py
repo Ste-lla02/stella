@@ -8,7 +8,7 @@ import os
 import seaborn as sns
 import torch
 import copy
-from pathlib import Path
+
 
 class EarlyStopping:
     def __init__(self,conf,task):
@@ -143,16 +143,16 @@ class Model:
             epoch += 1
 
         if check:
-            self.performance_report.write(f"Early stopping at epoch {epoch - 1}")
+            self.performance_report.write(f"Early stopping at epoch {epoch - 1}\n")
 
         # LOAD BEST MODEL
         self.model.load_state_dict(self.earlystopping.best_model_wts)
-        self.performance_report.write(f"Best model from epoch {self.earlystopping.best_epoch} loaded.")
+        self.performance_report.write(f"Best model from epoch {self.earlystopping.best_epoch} loaded.\n")
 
         # FINAL EVALUATION
         time_elapsed = time.time() - since
-        self.performance_report.write(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-        self.performance_report.write(f"Best validation loss: {-self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}")
+        self.performance_report.write(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s\n')
+        self.performance_report.write(f"Best validation loss: {-self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}\n")
         self.performance_report.close()
         self.plot_losses()
 
