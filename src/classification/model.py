@@ -78,7 +78,7 @@ class Model:
         self.train_acc=list()
         self.validation_losses = list()
         self.validation_acc=list()
-        self.full_graph_path = os.path.join('output', 'graphs',self.task, self.preprocessing + '_epoch_' + str(self.num_epochs))
+        self.full_graph_path = os.path.join('output', 'dim2','graphs',self.task, self.preprocessing + '_epoch_' + str(self.num_epochs))
         create_folder(self.full_graph_path)
         self.performance_report=open(self.df_path+'\\performance_report.txt','w')
 

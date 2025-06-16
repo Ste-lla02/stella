@@ -3,8 +3,8 @@ import os
 import torch.optim as optim
 import torch.nn as nn
 from torchvision import models
-from images.ImageDataset import ImageDataset
-from images.Classification import Classification
+from ImageDataset import ImageDataset
+from classification import Classification
 
 if __name__ == "__main__":
     torch.manual_seed(1)

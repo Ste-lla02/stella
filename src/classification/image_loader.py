@@ -22,14 +22,12 @@ class Image_Loader(AbstractLoader):
                     masks_filtered=[mask for mask in masks if str(mask['label_segmentation'])!='4']
                     if(len(masks_filtered)>0):
                         #overlay = self.manager.make_masks_overlay(masks_filtered)
-                        '''
+                        overlay = self.manager.make_overall_image(image_name, masks_filtered, highlits=True)
                         fig = plt.figure()
                         plt.axis('off')
                         plt.imshow(overlay)
-                        plt.savefig(self.configuration.get('maskfolder')+'\\Selected_masks\\'+str(image_name)+'.png',format='png', dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
+                        plt.savefig(self.configuration.get('maskfolder')+'\\Overlay\\'+str(image_name)+'.png',format='png', dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
                         plt.close(fig)
-                        '''
-                        overlay=self.manager.make_overall_image(image_name,masks_filtered)
                         label_mask=self.code_csv[self.code_csv['Record ID']==image_name]['VUP'].values[0]
                         mask_pillow = cv2_to_pil(overlay)
                         X.append(mask_pillow)

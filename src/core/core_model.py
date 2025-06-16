@@ -29,7 +29,7 @@ class State:
             self.images[image_name]['preprocessed'] = None
 
 
-    def make_overall_image(self, image_name, masks):
+    def make_overall_image(self, image_name, masks,highlits=False):
         blended = None
         base_image = self.get_original(image_name)
         if len(masks) > 0:
@@ -37,7 +37,7 @@ class State:
             overlay = np.zeros((h, w, 3), dtype=np.uint8)  # Immagine vuota per le maschere
             for mask in masks:
                 mask_img = mask['segmentation'].astype(np.uint8)  # Converti la maschera in uint8 (0-1 -> 0-255)
-                if len(masks)==1:
+                if len(masks)==1 or (highlits==True):
                     color=[255, 0, 0] #rosso se ho solo una mask
                 else:
                     color = np.random.randint(0, 255, (3,), dtype=np.uint8)  # Colore casuale
