@@ -12,7 +12,7 @@ def crop_image_with_polygon(image, image_name):
     mask = Image.new("L", image.size, 0)  # 'L' significa scala di grigi (0-255)
     draw = ImageDraw.Draw(mask)
     draw.polygon(points, fill=255)  # Disegna il poligono e riempilo con bianco (255)
-    # Applica la maschera all'immagine originale
+    # Applica la maschera all_400'immagine originale
     result = Image.new("RGBA", image.size)  # Creare un'immagine con canale alpha
     result.paste(image, mask=mask)  # Applica la maschera per conservare solo il poligono
     # Ritaglia l'immagine al bounding box del poligono per risparmiare spazio

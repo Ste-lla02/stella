@@ -17,6 +17,7 @@ class Image_Loader(AbstractLoader):
         for image_name, image in self.manager.images.items():
             try:
                 masks=image['masks']
+                masks=image['image_to_predict']
                 if('label_segmentation' in masks[0].keys()):
                     masks_filtered=[mask for mask in masks if str(mask['label_segmentation'])!='4']
                     if(len(masks_filtered)>0):
