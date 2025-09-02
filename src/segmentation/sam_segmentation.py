@@ -8,6 +8,7 @@ from src.utils.configuration import Configuration
 import gc
 
 from src.utils.utils import pil_to_cv2
+import torch
 
 
 class Segmenter:
@@ -17,7 +18,18 @@ class Segmenter:
         model_path = configuration.get('sam_model')
         sam_platform = configuration.get('sam_platform')
         sam_kind = configuration.get('sam_kind')
-        sam = sam_model_registry[sam_kind](checkpoint=model_path)
+        #sam = sam_model_registry[sam_kind](checkpoint=model_path)
+
+        # Inizializza il modello senza checkpoint
+        sam = sam_model_registry[sam_kind](checkpoint=None)
+
+        # Carica il checkpoint manualmente con weights_only=False
+        state_dict = torch.load(model_path, weights_only=False)
+
+        # Carica i pesi nel modello
+        sam.load_state_dict(state_dict)
+
+
         sam = sam.to(sam_platform)  # Cambia in "cpu" se usi CPU, "cuda" per GPU
         # Getting mask quality parameter values
         points_per_side = configuration.get('points_per_side')

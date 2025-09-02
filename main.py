@@ -75,8 +75,8 @@ def build(conf: Configuration):
                             send_ntfy_warning(topic, image_name, str(e))
                             image = image.convert("RGB")
                             images.set_original(image_name, image)
-                    else:
-                        send_ntfy_error(topic, image_name, str(e))
+                        else:
+                            send_ntfy_error(topic, image_name, str(e))
                 finally:
                     attempt -= 1
                     if attempt == 0:
