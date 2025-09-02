@@ -126,6 +126,6 @@ class State:
                     temp = pickle.load(f)
                     self.images[image_name] = temp
             except Exception as e:
-                error_list.write('ERROR pickle ' + image_name + '\n')
-                error_list.write(str(e) + '\n')
+                print('ERROR pickle ' + image_name + '\n')
+                print(str(e) + '\n')
 
