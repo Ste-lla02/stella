@@ -13,6 +13,7 @@ from src.classification.prediction import Prediction
 from src.classification.ResNet import ResNet
 import torch
 import cv2
+from src.labelling.db_extraction import Dobby_db
 
 
 '''def build(conf: Configuration):
@@ -132,11 +133,16 @@ def prediction(conf: Configuration):
 
     pass
 
+def extractFromDB(conf: Configuration):
+    dobby_db = Dobby_db(conf)
+    dobby_db.update_pikle()
+    pass
 
 functions = {
     'build': build,
     'clean': clean,
     'progress': progress,
+    'extractFromDB':extractFromDB,
     'classification':classification,
     'prediction':prediction
 }

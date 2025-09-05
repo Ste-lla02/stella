@@ -148,6 +148,12 @@ class Configuration(metaclass=Singleton):
             temp = reader['control'].get('clean_pickles', True)
             temp = temp == 'True'
             self.put('clean_pickles', temp)
+            #Labelling
+            temp = reader['labelling'].get('df_pickle', None)
+            self.put('df_pickle', temp)
+            temp = reader['labelling'].get('df_masks', None)
+            self.put('df_masks', temp)
+
             # Augmentation
             temp = reader['augmentation'].get('rotation_range', 0)
             self.put('rotation_range', int(temp))
