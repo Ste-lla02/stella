@@ -8,7 +8,8 @@ import random
 import pandas as pd
 
 class AbsDataset(Dataset):
-    def __init__(self, images, labels,codes=None):
+    def __init__(self, images, labels,codes=None,batch_size=32):
+        self.batch_size=batch_size
         self.codes=codes
         self.images = images
         #check 44 from wherw
@@ -87,7 +88,7 @@ class AbstractLoader(ABC):
     def __init__(self, conf,task):
         self.configuration = conf
         self.manager = State(conf)
-        self.dataset = self.load_mask_dataset()  # chiamerà quello definito nella sottoclasse
+        self.dataset = self.load_dataset()  # chiamerà quello definito nella sottoclasse
         self.train_loader = None
         self.test_loader = None
         self.dataset_sizes = None
@@ -125,11 +126,15 @@ class AbstractLoader(ABC):
             header=None, names=["Record ID", "Group"]
         )
         train_ids = split_df[split_df['Group']=='train']['Record ID'].values
-        test_ids = split_df[split_df['Group'] == 'test']['Record ID'].values
+        n_total = len(train_ids)
+        val_size = self.configuration.get(self.task + '_test_split')
+        validating = int(val_size* n_total)
+        val_samples = random.sample(train_ids, validating)
+        train_samples = [x for x in train_ids if x not in val_samples]
         lst=self.dataset.codes()
-        index_train=[lst.index(id) for id in train_ids]
-        index_test=[lst.index(id) for id in test_ids]
-        self.dataset_sizes = {'train': len(train_ids), 'test': len(test_ids)}
+        index_train=[lst.index(id) for id in train_samples]
+        index_test=[lst.index(id) for id in val_samples]
+        self.dataset_sizes = {'train': len(index_train), 'test': len(index_test)}
         return index_train, index_test
 
     def load_data(self):
@@ -142,8 +147,8 @@ class AbstractLoader(ABC):
         Y_train = [self.dataset.labels[i] for i in index_train]
         X_test = [self.dataset.images[i] for i in index_test]
         Y_test = [self.dataset.labels[i] for i in index_test]
-        self.train_loader = AbsDataset(X_train, Y_train)
-        self.test_loader = AbsDataset(X_test, Y_test)
+        self.train_loader = AbsDataset(X_train, Y_train,batch_size=self.configuration.get(self.task + '_batch_size'))
+        self.test_loader = AbsDataset(X_test, Y_test,batch_size=self.configuration.get(self.task + '_batch_size'))
 
 
 
