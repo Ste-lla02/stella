@@ -5,9 +5,11 @@ from src.core.core_model import State
 from torch.utils.data import Dataset
 from torch.utils.data import random_split
 import random
+import pandas as pd
 
-class MaskDataset(Dataset):
-    def __init__(self, images, labels):
+class AbsDataset(Dataset):
+    def __init__(self, images, labels,codes=None):
+        self.codes=codes
         self.images = images
         #check 44 from wherw
         self.labels = labels
@@ -95,30 +97,55 @@ class AbstractLoader(ABC):
             'undersampling': self.undersampling,
             '': lambda: None
         }
+        self.split_functions = {
+            'load_split': self.load_split,
+            'random_split': self.random_split,
+        }
 
     @abstractmethod
-    def load_mask_dataset(self):
+    def load_dataset(self):
         pass
 
+    def random_split(self):
+        test_size = self.configuration.get(self.task + '_test_split')
+        test_size = int(len(self.dataset.images) * test_size)
+        train_size = len(self.dataset.images) - test_size
+        train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
+        index_train = train_dataset.indices
+        index_test = test_dataset.indices
+        self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
+        return index_train, index_test
+
+
+    def load_split(self):
+        split_file = self.configuration.get('split_file')
+        split_df = pd.read_csv(
+            split_file,
+            sep=None, engine="python",  # inferisce il separatore
+            header=None, names=["Record ID", "Group"]
+        )
+        train_ids = split_df[split_df['Group']=='train']['Record ID'].values
+        test_ids = split_df[split_df['Group'] == 'test']['Record ID'].values
+        lst=self.dataset.codes()
+        index_train=[lst.index(id) for id in train_ids]
+        index_test=[lst.index(id) for id in test_ids]
+        self.dataset_sizes = {'train': len(train_ids), 'test': len(test_ids)}
+        return index_train, index_test
 
     def load_data(self):
         self.preprocessing = self.configuration.get(self.task+'_preprocessing')
         self.functions.get(self.preprocessing)()
         for c in range(0, self.dataset.get_num_classes()):
             print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
-        test_size=self.configuration.get(self.task+'_test_split')
-        test_size = int(len(self.dataset.images) * test_size)
-        train_size = len(self.dataset.images) - test_size
-        train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
-        index_train = train_dataset.indices
+        index_train, index_test=self.split_functions[self.configuration.get(self.task + '_split_option')]()
         X_train = [self.dataset.images[i] for i in index_train]
         Y_train = [self.dataset.labels[i] for i in index_train]
-        index_test = test_dataset.indices
         X_test = [self.dataset.images[i] for i in index_test]
         Y_test = [self.dataset.labels[i] for i in index_test]
-        self.train_loader = MaskDataset(X_train, Y_train)
-        self.test_loader = MaskDataset(X_test, Y_test)
-        self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
+        self.train_loader = AbsDataset(X_train, Y_train)
+        self.test_loader = AbsDataset(X_test, Y_test)
+
+
 
     def image_generator(self, image, label, n):
         rotation = self.configuration.get('rotation_range')

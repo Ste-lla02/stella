@@ -162,6 +162,8 @@ class Configuration(metaclass=Singleton):
             temp = reader['augmentation'].get('flip_ver_probability', 0)
             self.put('flip_ver_probability', float(temp))
             # Classification
+            temp = reader['classification'].get('classification_split_option', None)
+            self.put('split_option', temp)
             temp = reader['classification'].get('test_split', 0.2)
             self.put('classification_test_split', float(temp))
             temp = reader['classification'].get('num_epochs', 100)
@@ -180,6 +182,10 @@ class Configuration(metaclass=Singleton):
             temp = reader['classification'].get('model_path', 'best_model.pth')
             self.put('classification_model_path', str(temp))
             # Prediction
+            temp = reader['prediction'].get('prediction_split_option', None)
+            self.put('split_option', temp)
+            temp = reader['prediction'].get('split_file', None)
+            self.put('split_file', temp)
             temp = reader['prediction'].get('test_split', 0.2)
             self.put('prediction_test_split', float(temp))
             temp = reader['prediction'].get('num_epochs', 100)

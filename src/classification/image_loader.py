@@ -2,17 +2,18 @@ import pandas as pd
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import random
-from src.classification.abs_loader import AbstractLoader, MaskDataset
+from src.classification.abs_loader import AbstractLoader, AbsDataset
 from src.utils.utils import cv2_to_pil
 import numpy as np
 
 
 class Image_Loader(AbstractLoader):
-    def load_mask_dataset(self):
+    def load_dataset(self):
         self.code_csv=pd.read_csv(self.configuration.get('codescsv'),sep=';')
         self.manager.load_pickle()
         X=list()
         Y=list()
+        codes=list()
 
         for image_name, image in self.manager.images.items():
             try:
@@ -33,9 +34,10 @@ class Image_Loader(AbstractLoader):
                         mask_pillow = cv2_to_pil(overlay)
                         X.append(mask_pillow)
                         Y.append(int(label_mask))
+                        codes.append(image_name)
             except Exception as e:
                 print('Error image '+str(image_name)+': '+str(e))
-        return MaskDataset(X,Y)
+        return AbsDataset(X, Y, codes)
 
 
 
