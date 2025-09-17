@@ -15,6 +15,8 @@ class Image_Loader(AbstractLoader):
         Y=list()
 
         for image_name, image in self.manager.images.items():
+            if(image_name=='ID_152'):
+                print('ciao')
             try:
                 masks=image['masks']
                 #original=image['original']
@@ -23,11 +25,13 @@ class Image_Loader(AbstractLoader):
                     if(len(masks_filtered)>0):
                         #overlay = self.manager.make_masks_overlay(masks_filtered)
                         overlay = self.manager.make_overall_image(image_name, masks_filtered, highlits=True)
+                        '''
                         fig = plt.figure()
                         plt.axis('off')
                         plt.imshow(overlay)
                         plt.savefig(self.configuration.get('maskfolder')+'/Overlay/'+str(image_name)+'.png',format='png', dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
                         plt.close(fig)
+                        '''
                         #label_mask=self.code_csv[self.code_csv['Record ID']==image_name]['VUP'].values[0]
                         label_mask=self.code_csv[self.code_csv['Key']==image_name]['VUP'].values[0]
                         mask_pillow = cv2_to_pil(overlay)

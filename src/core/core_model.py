@@ -49,9 +49,9 @@ class State:
                     overlay[mask_img > 0] = color  # Applica colore alla maschera
                 if base_image is not None:
                     base_img = pil_to_cv2(base_image)
-                    base_img = cv2.cvtColor(base_img, cv2.COLOR_RGB2BGR)  # Converti in BGR se l'immagine di base è RGB
                     alpha = 0.35
                     blended = cv2.addWeighted(base_img, 1 - alpha, overlay, alpha, 0)
+
                 else:
                     blended = overlay
             else: blended = base_image

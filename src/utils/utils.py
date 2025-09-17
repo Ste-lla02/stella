@@ -9,10 +9,26 @@ def leq(a: float, b: float) -> bool:
 def geq(a: float, b: float) -> bool:
     return a >= b
 
-def pil_to_cv2(pil_image):
+def pil_to_cv2_old(pil_image):
+
     cv2_image = np.array(pil_image)  # Convert to NumPy array
     cv2_image = cv2.cvtColor(cv2_image, cv2.COLOR_RGB2BGR)  # Convert RGB to BGR
     return cv2_image
+
+def pil_to_cv2(pil_image):
+    """Converte un'immagine PIL in formato OpenCV (BGR), gestendo solo il caso di 2 canali."""
+    np_image = np.array(pil_image)
+
+    # Gestione speciale per immagini con 2 canali
+    if len(np_image.shape) == 3 and np_image.shape[2] == 2:
+        # Converte in RGB prima (es. da LA → RGB)
+        pil_image = pil_image.convert("RGB")
+        np_image = np.array(pil_image)
+        retval= cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+
+    # Caso standard RGB
+    retval= cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+    return retval
 
 
 def cv2_to_pil(cv2_image):
