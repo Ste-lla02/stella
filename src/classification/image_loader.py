@@ -1,4 +1,6 @@
 import pandas as pd
+from fontTools.misc.cython import returns
+from sympy.parsing.maxima import sub_dict
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import random
@@ -11,13 +13,37 @@ class Image_Loader(AbstractLoader):
     def load_dataset(self):
         self.code_csv=pd.read_csv(self.configuration.get('codescsv'),sep=';')
         self.manager.load_pickle()
-        X=list()
-        Y=list()
-        codes=list()
+        if(self.dataset is None):
+            self.dataset=self.create_dataset(self.manager.images)
+        else:
+            train_dict = self.load_split('training')
+            self.train_dataset = self.create_dataset(train_dict)
+            test_dict = self.load_split('test')
+            self.test_dataset = self.create_dataset(test_dict)
 
-        for image_name, image in self.manager.images.items():
-            if(image_name=='ID_152'):
-                print('ciao')
+
+
+
+
+
+    def load_split(self,split_subset):
+        sub_dict = self.manager.images.copy()
+        split_file = self.configuration.get('split_file')
+        split_df = pd.read_csv(
+            split_file,
+            sep=None, engine="python",  # inferisce il separatore
+            header=None, names=["Record ID", "Group"]
+        )
+        subset_ids = split_df[split_df['Group']==split_subset]['Record ID'].tolist()
+        sub_dict = {k: sub_dict[k] for k in subset_ids if k in sub_dict}
+        return sub_dict
+
+
+    def create_dataset(self,image_dict):
+        X = list()
+        Y = list()
+        codes = list()
+        for image_name, image in image_dict.items():
             try:
                 masks=image['masks']
                 #original=image['original']
@@ -26,13 +52,11 @@ class Image_Loader(AbstractLoader):
                     if(len(masks_filtered)>0):
                         #overlay = self.manager.make_masks_overlay(masks_filtered)
                         overlay = self.manager.make_overall_image(image_name, masks_filtered, highlits=True)
-                        '''
                         fig = plt.figure()
                         plt.axis('off')
                         plt.imshow(overlay)
                         plt.savefig(self.configuration.get('maskfolder')+'/Overlay/'+str(image_name)+'.png',format='png', dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
                         plt.close(fig)
-                        '''
                         #label_mask=self.code_csv[self.code_csv['Record ID']==image_name]['VUP'].values[0]
                         label_mask=self.code_csv[self.code_csv['Key']==image_name]['VUP'].values[0]
                         mask_pillow = cv2_to_pil(overlay)
@@ -41,9 +65,7 @@ class Image_Loader(AbstractLoader):
                         codes.append(image_name)
             except Exception as e:
                 print('Error image '+str(image_name)+': '+str(e))
-        return AbsDataset(X, Y, codes)
-
-
+            return AbsDataset(X, Y, codes)
 
 
 

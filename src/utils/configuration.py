@@ -184,8 +184,8 @@ class Configuration(metaclass=Singleton):
             temp = reader['classification'].get('model_path', 'best_model.pth')
             self.put('classification_model_path', str(temp))
             # Prediction
-            temp = reader['prediction'].get('prediction_split_option', None)
-            self.put('split_option', temp)
+            temp = reader['prediction'].get('split_option', None)
+            self.put('prediction_split_option', temp)
             temp = reader['prediction'].get('split_file', None)
             self.put('split_file', temp)
             temp = reader['prediction'].get('test_split', 0.2)

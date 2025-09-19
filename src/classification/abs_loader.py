@@ -88,7 +88,7 @@ class AbstractLoader(ABC):
     def __init__(self, conf,task):
         self.configuration = conf
         self.manager = State(conf)
-        self.dataset = self.load_dataset()  # chiamerà quello definito nella sottoclasse
+        self.dataset = self.load_dataset(self.manager.images)  # chiamerà quello definito nella sottoclasse
         self.train_loader = None
         self.test_loader = None
         self.dataset_sizes = None
@@ -118,38 +118,23 @@ class AbstractLoader(ABC):
         return index_train, index_test
 
 
-    def load_split(self):
-        split_file = self.configuration.get('split_file')
-        split_df = pd.read_csv(
-            split_file,
-            sep=None, engine="python",  # inferisce il separatore
-            header=None, names=["Record ID", "Group"]
-        )
-        train_ids = split_df[split_df['Group']=='train']['Record ID'].values
-        n_total = len(train_ids)
-        val_size = self.configuration.get(self.task + '_test_split')
-        validating = int(val_size* n_total)
-        val_samples = random.sample(train_ids, validating)
-        train_samples = [x for x in train_ids if x not in val_samples]
-        lst=self.dataset.codes()
-        index_train=[lst.index(id) for id in train_samples]
-        index_test=[lst.index(id) for id in val_samples]
-        self.dataset_sizes = {'train': len(index_train), 'test': len(index_test)}
-        return index_train, index_test
+    def data_preprocessing(self):
 
-    def load_data(self):
-        self.preprocessing = self.configuration.get(self.task+'_preprocessing')
-        self.functions.get(self.preprocessing)()
-        for c in range(0, self.dataset.get_num_classes()):
+
+        '''
+                for c in range(0, self.dataset.get_num_classes()):
             print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
-        index_train, index_test=self.split_functions[self.configuration.get(self.task + '_split_option')]()
+        self.preprocessing = self.configuration.get(self.task + '_preprocessing')
+        self.functions.get(self.preprocessing)()
+        index_train, index_test=self.random_split()
         X_train = [self.dataset.images[i] for i in index_train]
         Y_train = [self.dataset.labels[i] for i in index_train]
         X_test = [self.dataset.images[i] for i in index_test]
         Y_test = [self.dataset.labels[i] for i in index_test]
         self.train_loader = AbsDataset(X_train, Y_train,batch_size=self.configuration.get(self.task + '_batch_size'))
         self.test_loader = AbsDataset(X_test, Y_test,batch_size=self.configuration.get(self.task + '_batch_size'))
-
+        '''
+        self.load_dataset()
 
 
     def image_generator(self, image, label, n):

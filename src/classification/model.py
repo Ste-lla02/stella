@@ -30,19 +30,19 @@ class EarlyStopping:
         self.y_pred_best = None
 
     def __call__(self, val_loss, model, epoch, y_true=None, y_pred=None):
-        score = -val_loss  # Per minimizzare la loss
+         # Per minimizzare la loss
 
         if self.best_score is None:
-            self.best_score = score
+            self.best_score = val_loss
             self.save_checkpoint(val_loss, model, epoch, y_true, y_pred)
-        elif score < self.best_score + self.delta:
+        elif val_loss + self.delta >= self.best_score:
             self.counter += 1
             if self.verbose:
                 self.trace_func(f'No improvement in validation loss for {self.counter} epoch(s).')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
-            self.best_score = score
+            self.best_score = val_loss
             self.save_checkpoint(val_loss, model, epoch, y_true, y_pred)
             self.counter = 0
 
@@ -71,7 +71,7 @@ class Model:
         self.earlystopping=EarlyStopping(conf,self.task)
         self.df_path=os.path.join(conf.get('reportcsv'),self.task)
         create_folder(self.df_path)
-        self.df_name=self.df_path+'\\report_label_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
+        self.df_name=self.df_path+'/report_label_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
         self.results=dict()
         self.report=pd.DataFrame(columns=['epoch','phase','loss','overall accuracy','class','accuracy','specificity', 'precision','recall','f1_score'])
         self.train_losses=list()
@@ -80,7 +80,7 @@ class Model:
         self.validation_acc=list()
         self.full_graph_path = os.path.join('output', 'dim2','graphs',self.task, self.preprocessing + '_epoch_' + str(self.num_epochs))
         create_folder(self.full_graph_path)
-        self.performance_report=open(self.df_path+'\\performance_report.txt','w')
+        self.performance_report=open(self.df_path+'/performance_report.txt','w')
 
     def train(self):
         since = time.time()
