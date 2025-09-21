@@ -12,31 +12,12 @@ import numpy as np
 class Image_Loader(AbstractLoader):
     def load_dataset(self):
         self.code_csv=pd.read_csv(self.configuration.get('codescsv'),sep=';')
-        self.manager.load_pickle()
         if(self.dataset is None):
-            self.dataset=self.create_dataset(self.manager.images)
+            self.manager.load_pickle()
+            self.create_dataset(self.manager.images)
         else:
-            train_dict = self.load_split('training')
-            self.train_dataset = self.create_dataset(train_dict)
-            test_dict = self.load_split('test')
-            self.test_dataset = self.create_dataset(test_dict)
+            self.load_split()
 
-
-
-
-
-
-    def load_split(self,split_subset):
-        sub_dict = self.manager.images.copy()
-        split_file = self.configuration.get('split_file')
-        split_df = pd.read_csv(
-            split_file,
-            sep=None, engine="python",  # inferisce il separatore
-            header=None, names=["Record ID", "Group"]
-        )
-        subset_ids = split_df[split_df['Group']==split_subset]['Record ID'].tolist()
-        sub_dict = {k: sub_dict[k] for k in subset_ids if k in sub_dict}
-        return sub_dict
 
 
     def create_dataset(self,image_dict):
@@ -66,6 +47,22 @@ class Image_Loader(AbstractLoader):
             except Exception as e:
                 print('Error image '+str(image_name)+': '+str(e))
             return AbsDataset(X, Y, codes)
+
+
+    def load_split(self):
+        sub_dict = self.manager.images.copy()
+        split_file = self.configuration.get('split_file')
+        split_df = pd.read_csv(
+            split_file,
+            sep=None, engine="python",  # inferisce il separatore
+            header=None, names=["Record ID", "Group"]
+        )
+        subset_ids = split_df[split_df['Group']=='training']['Record ID'].tolist()
+        train_dict = {k: sub_dict[k] for k in subset_ids if k in sub_dict}
+        self.train_dataset = self.create_dataset(train_dict)
+        subset_ids = split_df[split_df['Group'] == 'test']['Record ID'].tolist()
+        test_dict = {k: sub_dict[k] for k in subset_ids if k in sub_dict}
+        self.test_dataset = self.create_dataset(test_dict)
 
 
 

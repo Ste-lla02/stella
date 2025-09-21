@@ -80,15 +80,16 @@ class AbsDataset(Dataset):
             if(dim<min):
                 min=dim
         return min
-    def add_new_instances(self,image, label):
+    def add_new_instances(self,image, label,code):
         self.images.append(image)
         self.labels.append(label)
+        self.codes.append(code)
 
 class AbstractLoader(ABC):
     def __init__(self, conf,task):
         self.configuration = conf
         self.manager = State(conf)
-        self.dataset = self.load_dataset(self.manager.images)  # chiamerà quello definito nella sottoclasse
+        self.dataset = self.load_dataset()  # chiamerà quello definito nella sottoclasse
         self.train_loader = None
         self.test_loader = None
         self.dataset_sizes = None
@@ -99,7 +100,7 @@ class AbstractLoader(ABC):
             '': lambda: None
         }
         self.split_functions = {
-            'load_split': self.load_split,
+            'load_split': self.load_dataset,
             'random_split': self.random_split,
         }
 
@@ -114,30 +115,31 @@ class AbstractLoader(ABC):
         train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
         index_train = train_dataset.indices
         index_test = test_dataset.indices
-        self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
-        return index_train, index_test
-
-
-    def data_preprocessing(self):
-
-
-        '''
-                for c in range(0, self.dataset.get_num_classes()):
-            print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
-        self.preprocessing = self.configuration.get(self.task + '_preprocessing')
-        self.functions.get(self.preprocessing)()
-        index_train, index_test=self.random_split()
         X_train = [self.dataset.images[i] for i in index_train]
         Y_train = [self.dataset.labels[i] for i in index_train]
         X_test = [self.dataset.images[i] for i in index_test]
         Y_test = [self.dataset.labels[i] for i in index_test]
-        self.train_loader = AbsDataset(X_train, Y_train,batch_size=self.configuration.get(self.task + '_batch_size'))
-        self.test_loader = AbsDataset(X_test, Y_test,batch_size=self.configuration.get(self.task + '_batch_size'))
-        '''
-        self.load_dataset()
+        self.train_loader = AbsDataset(X_train, Y_train, batch_size=self.configuration.get(self.task + '_batch_size'))
+        self.test_loader = AbsDataset(X_test, Y_test, batch_size=self.configuration.get(self.task + '_batch_size'))
+        self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
 
 
-    def image_generator(self, image, label, n):
+
+
+
+    def data_preprocessing(self):
+        self.preprocessing = self.configuration.get(self.task + '_preprocessing')
+        split_opt=self.configuration.get(self.task + 'split_option')
+        if split_opt!='load_split':
+            self.functions.get(self.preprocessing)()
+        for c in range(0, self.dataset.get_num_classes()):
+            print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
+        self.split_functions.get(split_opt)()
+
+
+
+
+    def image_generator(self, image, label,code, n):
         rotation = self.configuration.get('rotation_range')
         p_hor = self.configuration.get('flip_hor_probability')
         p_ver = self.configuration.get('flip_ver_probability')
@@ -150,7 +152,7 @@ class AbstractLoader(ABC):
         for i in range(n):
             result = transformer(image)
             new_images.append(result)
-            self.dataset.add_new_instances(result, label)
+            self.dataset.add_new_instances(result, label,code)
 
         return new_images
 
@@ -165,10 +167,12 @@ class AbstractLoader(ABC):
                 q, r = divmod(target_size, current_size)
                 # combinations=[(random.choice(rotation), random.choice(width), random.choice(height)) for _ in range(repeat)]
                 for index in indexes:
-                    self.image_generator(self.dataset.images[index], int(c), q-1)
+                    code=self.dataset.images[index]['image_name']
+                    self.image_generator(self.dataset.images[index], int(c),code, q-1)
                 for i in range(r):
                     chosen=random.choice(indexes)
-                    self.image_generator(self.dataset.images[chosen], int(c), 1)
+                    code = self.dataset.images[chosen]['image_name']
+                    self.image_generator(self.dataset.images[chosen], int(c),code, 1)
 
     def undersampling(self):
         classes = list(set(self.dataset.labels))
