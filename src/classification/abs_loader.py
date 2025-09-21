@@ -4,40 +4,42 @@ from torchvision import transforms
 from src.core.core_model import State
 from torch.utils.data import Dataset
 from torch.utils.data import random_split
+from torch.utils.data import DataLoader,Subset
 import random
 import pandas as pd
 
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
+
 class AbsDataset(Dataset):
-    def __init__(self, images, labels,codes=None,batch_size=32):
-        self.batch_size=batch_size
-        self.codes=codes
+    def __init__(self, images, labels, codes=None):
+        self.codes = codes
         self.images = images
-        #check 44 from wherw
         self.labels = labels
-        self.mean, self.std=self.compute_mean_std()
-        self.transform  = transforms.Compose([
+
+        # 2) definisco il transform
+        self.transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=self.mean, std=self.std),
-            transforms.Lambda(lambda x: x.unsqueeze(0)),
+            transforms.Normalize(mean=[0.5], std=[0.5])
         ])
+
+        self.images = [self.transform(img) for img in self.images]
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
-        x = self.images[idx]
+        x = self.images[idx]                  # già tensor [1,224,224]
         y = self.labels[idx]
-
-        if self.transform:
-            x = self.transform(x)
-        y = torch.tensor([y], dtype=torch.long)
+        y = torch.tensor(y, dtype=torch.long) # scalare, non [y]
         return x, y
 
     def compute_mean_std(self):
-        means=[]
-        stds= []
+        means = []
+        stds = []
         transform_no_norm = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             transforms.Resize((224, 224)),
@@ -45,62 +47,66 @@ class AbsDataset(Dataset):
         ])
 
         for img in self.images:
-            tensor = transform_no_norm(img)  # (C, H, W)
-            means.append(tensor.mean(dim=(1, 2)))  # media per canale
-            stds.append(tensor.std(dim=(1, 2)))    # std per canale
+            tensor = transform_no_norm(img)      # [1, H, W]
+            means.append(tensor.mean(dim=(1, 2)))  # media per canale (qui è 1 valore)
+            stds.append(tensor.std(dim=(1, 2)))    # std per canale (1 valore)
 
-        mean = torch.stack(means).mean(dim=0)  # (3,)
-        std = torch.stack(stds).mean(dim=0)    # (3,)
+        mean = torch.stack(means).mean(dim=0)  # shape [1]
+        std  = torch.stack(stds).mean(dim=0)   # shape [1]
         return mean.tolist(), std.tolist()
 
-
     def get_num_classes(self):
-        classes=list(set(self.labels))
+        classes = list(set(self.labels))
         return len(classes)
 
     def get_class_instances(self, class_id):
-        indexes_class=[i for i, val in enumerate(self.labels) if val==class_id]
-        subset=[self.images[i] for i in indexes_class]
-        return subset,indexes_class
+        indexes_class = [i for i, val in enumerate(self.labels) if val == class_id]
+        subset = [self.images[i] for i in indexes_class]
+        return subset, indexes_class
 
     def get_max_size(self):
         classes = list(set(self.labels))
-        max=0
+        maxv = 0
         for c in classes:
-            dim=len(self.get_class_instances(c)[0])
-            if(dim>max):
-                max=dim
-        return max
+            dim = len(self.get_class_instances(c)[0])
+            if dim > maxv:
+                maxv = dim
+        return maxv
 
     def get_min_size(self):
         classes = list(set(self.labels))
-        min=len(self.labels)
+        minv = len(self.labels)
         for c in classes:
-            dim=len(self.get_class_instances(c)[0])
-            if(dim<min):
-                min=dim
-        return min
-    def add_new_instances(self,image, label,code):
-        self.images.append(image)
+            dim = len(self.get_class_instances(c)[0])
+            if dim < minv:
+                minv = dim
+        return minv
+
+    def add_new_instances(self, image, label, code):
+        # Mantieni coerenza: trasformo anche i nuovi campioni
+        self.images.append(self.transform(image))  # tensor [1,H,W]
         self.labels.append(label)
-        self.codes.append(code)
+        if self.codes is not None:
+            self.codes.append(code)
+
 
 class AbstractLoader(ABC):
     def __init__(self, conf,task):
         self.configuration = conf
         self.manager = State(conf)
-        self.dataset = self.load_dataset()  # chiamerà quello definito nella sottoclasse
+        self.dataset=None
+        self.task = task
+        self.load_dataset()  # chiamerà quello definito nella sottoclasse
         self.train_loader = None
         self.test_loader = None
         self.dataset_sizes = None
-        self.task=task
         self.functions = {
             'augmentation': self.augmentation,
             'undersampling': self.undersampling,
             '': lambda: None
         }
         self.split_functions = {
-            'load_split': self.load_dataset,
+            'load_split': self.load_split,
             'random_split': self.random_split,
         }
 
@@ -115,13 +121,32 @@ class AbstractLoader(ABC):
         train_dataset, test_dataset = random_split(self.dataset, [train_size, test_size])
         index_train = train_dataset.indices
         index_test = test_dataset.indices
-        X_train = [self.dataset.images[i] for i in index_train]
-        Y_train = [self.dataset.labels[i] for i in index_train]
-        X_test = [self.dataset.images[i] for i in index_test]
-        Y_test = [self.dataset.labels[i] for i in index_test]
-        self.train_loader = AbsDataset(X_train, Y_train, batch_size=self.configuration.get(self.task + '_batch_size'))
-        self.test_loader = AbsDataset(X_test, Y_test, batch_size=self.configuration.get(self.task + '_batch_size'))
+        sub_train = Subset(self.dataset, index_train)
+        self.train_loader = DataLoader(sub_train, batch_size=self.configuration.get(self.task + '_batch_size'),
+                                       shuffle=True)
+        sub_test = Subset(self.dataset, index_test)
+        self.test_loader = DataLoader(sub_test, batch_size=self.configuration.get(self.task + '_batch_size'),
+                                      shuffle=True)
+        self.dataset_sizes = {'train': len(index_train), 'test': len(index_test)}
         self.dataset_sizes = {'train': len(train_dataset), 'test': len(test_dataset)}
+    def load_split(self):
+        split_file = self.configuration.get('split_file')
+        split_df = pd.read_csv(
+            split_file,
+            sep=None, engine="python",  # inferisce il separatore
+            header=None, names=["Record ID", "Group"]
+        )
+        train_codes = split_df[split_df['Group']=='train']['Record ID'].tolist()
+        test_codes = split_df[split_df['Group'] == 'test']['Record ID'].tolist()
+        index_train = [i for i, c in enumerate(self.dataset.codes) if c in train_codes]
+        index_test = [i for i, c in enumerate(self.dataset.codes) if c in test_codes]
+        sub_train=Subset(self.dataset, index_train)
+        self.train_loader = DataLoader(sub_train, batch_size=self.configuration.get(self.task + '_batch_size'),
+                                       shuffle=True)
+        sub_test = Subset(self.dataset, index_test)
+        self.test_loader = DataLoader(sub_test, batch_size=self.configuration.get(self.task + '_batch_size'),
+                                      shuffle=True)
+        self.dataset_sizes = {'train': len(index_train), 'test': len(index_test)}
 
 
 
@@ -129,7 +154,7 @@ class AbstractLoader(ABC):
 
     def data_preprocessing(self):
         self.preprocessing = self.configuration.get(self.task + '_preprocessing')
-        split_opt=self.configuration.get(self.task + 'split_option')
+        split_opt=self.configuration.get(self.task + '_split_option')
         if split_opt!='load_split':
             self.functions.get(self.preprocessing)()
         for c in range(0, self.dataset.get_num_classes()):

@@ -100,6 +100,9 @@ class Model:
             labels_list, preds_list = [], []
 
             for inputs, labels in self.loader.train_loader:
+                if(epoch==0):
+                    print("Batch input shape:", inputs.shape)
+                    print("Batch labels shape:", labels.shape)
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
                 self.optimizer.zero_grad()
