@@ -11,18 +11,18 @@ import copy
 
 
 class EarlyStopping:
-    def __init__(self,conf,task):
-        self.task=task
-        self.patience = conf.get(self.task+'_patience')
-        self.verbose = conf.get(self.task+'_verbose')
-        self.delta = conf.get(self.task+'_delta')
-        self.path = conf.get(self.task+'_model_path')
+    def __init__(self, conf, task):
+        self.task = task
+        self.patience = conf.get(self.task + '_patience')
+        self.verbose = True
+        self.delta = conf.get(self.task + '_delta')
+        self.path = conf.get(self.task + '_model_path')
         self.trace_func = print
 
         self.counter = 0
-        self.best_score = None
+        self.best_score = None     # qui memorizziamo la *migliore val_loss* (float)
         self.early_stop = False
-        self.val_loss_min = torch.tensor(float('inf'))
+        self.val_loss_min = float('inf')
         self.best_model_wts = None
         self.best_epoch = -1
 
@@ -30,31 +30,39 @@ class EarlyStopping:
         self.y_pred_best = None
 
     def __call__(self, val_loss, model, epoch, y_true=None, y_pred=None):
-         # Per minimizzare la loss
+        # forza a float
+        val = val_loss.item() if isinstance(val_loss, torch.Tensor) else float(val_loss)
 
         if self.best_score is None:
-            self.best_score = val_loss
-            self.save_checkpoint(val_loss, model, epoch, y_true, y_pred)
-        elif val_loss + self.delta >= self.best_score:
+            self.best_score = val
+            self._save_checkpoint(val, model, epoch, y_true, y_pred)
+            self.counter = 0
+            return
+
+        # miglioramento se scende di almeno delta
+        if val < (self.best_score - self.delta):
+            self.best_score = val
+            self._save_checkpoint(val, model, epoch, y_true, y_pred)
+            self.counter = 0
+        else:
             self.counter += 1
             if self.verbose:
-                self.trace_func(f'No improvement in validation loss for {self.counter} epoch(s).')
+                self.trace_func(f'No improvement in val loss for {self.counter} epoch(s). '
+                                f'Best: {self.best_score:.6f} | Current: {val:.6f}')
             if self.counter >= self.patience:
                 self.early_stop = True
-        else:
-            self.best_score = val_loss
-            self.save_checkpoint(val_loss, model, epoch, y_true, y_pred)
-            self.counter = 0
 
-    def save_checkpoint(self, val_loss, model, epoch, y_true, y_pred):
+    def _save_checkpoint(self, val, model, epoch, y_true, y_pred):
         if self.verbose:
             self.trace_func(f'Validation loss decreased. Saving model at epoch {epoch} ...')
         self.best_model_wts = copy.deepcopy(model.state_dict())
         self.best_epoch = epoch
-        self.val_loss_min = val_loss.clone() if isinstance(val_loss, torch.Tensor) else torch.tensor(val_loss)
-        torch.save(self.best_model_wts, self.path)
+        self.val_loss_min = val
+        if self.path:
+            torch.save(self.best_model_wts, self.path)
         self.y_true_best = y_true
         self.y_pred_best = y_pred
+
 
 
 class Model:
@@ -92,9 +100,10 @@ class Model:
 
         # TRAINING WITH EPOCHS AND EARLY STOPPING
         while epoch < self.num_epochs and not check:
+
             print(f'Epoch {epoch}/{self.num_epochs - 1}')
             print('-' * 10)
-
+            self.model.train()
             running_loss = 0.0
             running_corrects = 0
             labels_list, preds_list = [], []
@@ -140,7 +149,8 @@ class Model:
             self.evaluate('validating', epoch, val_loss, val_acc, y_true_test, y_pred_test)
 
             # EARLY STOPPING
-            self.earlystopping(torch.tensor(epoch_loss), self.model, epoch, y_true=y_true_test, y_pred=y_pred_test)
+
+            self.earlystopping(val_loss, self.model, epoch, y_true=y_true_test, y_pred=y_pred_test)  # <-- FIX
 
             check = self.earlystopping.early_stop
             epoch += 1
@@ -155,7 +165,7 @@ class Model:
         # FINAL EVALUATION
         time_elapsed = time.time() - since
         self.performance_report.write(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s\n')
-        self.performance_report.write(f"Best validation loss: {-self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}\n")
+        self.performance_report.write(f"Best validation loss: {self.earlystopping.best_score:.4f} at epoch {self.earlystopping.best_epoch}\n")
         self.performance_report.close()
         self.plot_losses()
 

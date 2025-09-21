@@ -84,7 +84,7 @@ class AbsDataset(Dataset):
 
     def add_new_instances(self, image, label, code):
         # Mantieni coerenza: trasformo anche i nuovi campioni
-        self.images.append(self.transform(image))  # tensor [1,H,W]
+        self.images.append(image)  # tensor [1,H,W]
         self.labels.append(label)
         if self.codes is not None:
             self.codes.append(code)
@@ -155,16 +155,19 @@ class AbstractLoader(ABC):
     def data_preprocessing(self):
         self.preprocessing = self.configuration.get(self.task + '_preprocessing')
         split_opt=self.configuration.get(self.task + '_split_option')
-        if split_opt!='load_split':
-            self.functions.get(self.preprocessing)()
         for c in range(0, self.dataset.get_num_classes()):
             print('Class ' + str(c) + ' number samples ' + str(len(self.dataset.get_class_instances(c)[1])))
         self.split_functions.get(split_opt)()
+        self.functions.get(self.preprocessing)()
+        print('Training dataset after preprocessing\n')
+        for c in range(0, self.train_loader.dataset.dataset.get_num_classes()):
+            print('Class ' + str(c) + ' number samples ' + str(len(self.train_loader.dataset.dataset.get_class_instances(c)[1])))
 
 
 
 
-    def image_generator(self, image, label,code, n):
+
+    def image_generator(self, image, label, n):
         rotation = self.configuration.get('rotation_range')
         p_hor = self.configuration.get('flip_hor_probability')
         p_ver = self.configuration.get('flip_ver_probability')
@@ -177,7 +180,8 @@ class AbstractLoader(ABC):
         for i in range(n):
             result = transformer(image)
             new_images.append(result)
-            self.dataset.add_new_instances(result, label,code)
+            self.train_loader.dataset.dataset.add_new_instances(result, label, 'AUG')
+            #self.dataset.add_new_instances(result, label,code)
 
         return new_images
 
@@ -192,12 +196,10 @@ class AbstractLoader(ABC):
                 q, r = divmod(target_size, current_size)
                 # combinations=[(random.choice(rotation), random.choice(width), random.choice(height)) for _ in range(repeat)]
                 for index in indexes:
-                    code=self.dataset.images[index]['image_name']
-                    self.image_generator(self.dataset.images[index], int(c),code, q-1)
+                    self.image_generator(self.dataset.images[index], int(c), q-1)
                 for i in range(r):
                     chosen=random.choice(indexes)
-                    code = self.dataset.images[chosen]['image_name']
-                    self.image_generator(self.dataset.images[chosen], int(c),code, 1)
+                    self.image_generator(self.dataset.images[chosen], int(c), 1)
 
     def undersampling(self):
         classes = list(set(self.dataset.labels))
