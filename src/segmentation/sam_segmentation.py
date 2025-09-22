@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
-
+# python -m pip install git+https://github.com/facebookresearch/segment-anything.git
 from src.segmentation.evaluator import MaskFeaturing
 from src.utils.configuration import Configuration
 import gc
