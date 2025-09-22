@@ -49,24 +49,7 @@ class Image_Loader(AbstractLoader):
         plt.close(fig)
 
 
-        '''
-            def load_split(self):
-        sub_dict = self.manager.images.copy()
-        split_file = self.configuration.get('split_file')
-        split_df = pd.read_csv(
-            split_file,
-            sep=None, engine="python",  # inferisce il separatore
-            header=None, names=["Record ID", "Group"]
-        )
-        subset_ids = split_df[split_df['Group']=='training']['Record ID'].tolist()
-        train_ds = Subset(full_ds, train_indices)
-        test_ds = Subset(full_ds, test_indices)
-        train_dict = {k: sub_dict[k] for k in subset_ids if k in sub_dict}
-        self.train_loader = self.create_dataset(train_dict)
-        subset_ids = split_df[split_df['Group'] == 'test']['Record ID'].tolist()
-        test_dict = {k: sub_dict[k] for k in subset_ids if k in sub_dict}
-        self.test_loader = self.create_dataset(test_dict)
-        '''
+
 
 
 

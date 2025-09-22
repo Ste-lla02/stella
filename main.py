@@ -138,14 +138,28 @@ def extractFromDB(conf: Configuration):
     dobby_db.update_pikle()
     pass
 
+def validation(conf: Configuration):
+    torch.manual_seed(1)
+    loader = Image_Loader(conf, 'prediction')
+    loader.load_split()
+    resnet = ResNet(conf, loader, 'prediction')
+    resnet()
+    resnet.load()
+    predictor = Prediction(resnet.model, resnet.criterion, resnet.optimizer, resnet.device, conf, loader, 'prediction')
+    predictor.validate()
+
+
 functions = {
     'build': build,
     'clean': clean,
     'progress': progress,
     'extractFromDB':extractFromDB,
     'classification':classification,
-    'prediction':prediction
+    'prediction':prediction,
+    'validation':validation
 }
+
+
 
 if __name__ == '__main__':
     configuration = Configuration(sys.argv[1])

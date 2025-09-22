@@ -11,6 +11,7 @@ class ResNet():
         self.criterion=None
         self.optimizer=None
         self.model=None
+        self.path=self.conf.get(self.task+'_model_path')
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -21,3 +22,14 @@ class ResNet():
         self.model = model.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.SGD(model.parameters(), lr=self.conf.get(self.task+'_learning_rate'))
+
+    def load(self) -> bool:
+        retval = False
+        try:
+            checkpoint = torch.load(self.path, map_location=self.device)
+            self.model.load_state_dict(checkpoint["model_state_dict"])
+            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            retval = True
+        except Exception as e:
+            print(e)
+        return retval

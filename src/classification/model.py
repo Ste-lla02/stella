@@ -8,7 +8,8 @@ import os
 import seaborn as sns
 import torch
 import copy
-
+import csv
+import torch.nn as nn
 
 class EarlyStopping:
     def __init__(self, conf, task):
@@ -309,3 +310,31 @@ class Model:
         filename = os.path.join(self.full_graph_path, f"accuracy_graph.pdf")
         plt.savefig(filename, format='pdf', dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
         plt.close()
+
+    def validate(self):
+        results = []
+        softmax = nn.Softmax(dim=1)
+
+        with torch.no_grad():
+            for codes, images, labels in self.loader.test_loader:
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+
+                outputs = self.model(images)
+                probs = softmax(outputs)
+                preds = probs.argmax(dim=1)
+
+                for pid, pred, gt in zip(codes, preds.cpu().tolist(), labels.cpu().tolist()):
+                    results.append({
+                        "paziente": pid,
+                        "modello_ai": pred,
+                        "medico": gt
+                    })
+
+        # Salva in CSV
+        out_csv = self.df_path+'/predictions_'+ str(self.preprocessing[0:3])+'_'+str(self.num_epochs)+'.csv'
+        with open(out_csv, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["paziente", "modello_ai", "medico"])
+            writer.writeheader()
+            writer.writerows(results)
+
