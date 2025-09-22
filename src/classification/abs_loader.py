@@ -211,5 +211,5 @@ class AbstractLoader(ABC):
                 q = current_size - target_size
                 to_delete = random.sample(indexes, q)
                 for idx in sorted(to_delete, reverse=True):
-                    del self.dataset.images[idx]
-                    del self.dataset.labels[idx]
+                    del self.train_loader.dataset.dataset.images[idx]
+                    del self.train_loader.datasetdataset.labels[idx]
