@@ -1,5 +1,6 @@
 import sys, os
 from src.core.core_model import State
+from src.explainability.gradcam import GradCAM
 from src.preprocessing.preprocessing import Preprocessor
 from src.segmentation.evaluator import MaskFeaturing
 from src.segmentation.sam_segmentation import Segmenter
@@ -14,7 +15,7 @@ from src.classification.ResNet import ResNet
 import torch
 import cv2
 from src.labelling.db_extraction import Dobby_db
-
+from src.explainability.cam_utils import prepare_explain_out_dir,load_checkpoint_into_model, prepare_explain_input_dir, prepare_ckpt_path
 
 '''def build(conf: Configuration):
     # Cleaning
@@ -133,6 +134,27 @@ def prediction(conf: Configuration):
 
     pass
 
+
+def explainability(conf: Configuration):
+    topic = conf.get('ntfy_topic')
+    send_ntfy_start(topic, 'explainability')
+
+    input_dir = prepare_explain_input_dir(conf)
+    out_dir = prepare_explain_out_dir(conf)
+
+    resnet = ResNet(conf, loader=None, task='explainability')
+    resnet.explainability_call()
+
+    ckpt_path = prepare_ckpt_path(conf)
+    model = load_checkpoint_into_model(resnet.model, ckpt_path, resnet.device)
+
+    cam_engine = GradCAM(model=model, grayscale=True, device=resnet.device)
+    count = cam_engine.process_folder(input_dir, out_dir)
+
+    print(f"[GradCAM] Salvate {count} immagini in: {out_dir}")
+    send_ntfy_notification(topic)
+    pass
+
 def extractFromDB(conf: Configuration):
     dobby_db = Dobby_db(conf)
     dobby_db.update_pikle()
@@ -144,7 +166,8 @@ functions = {
     'progress': progress,
     'extractFromDB':extractFromDB,
     'classification':classification,
-    'prediction':prediction
+    'prediction':prediction,
+    'explainability': explainability
 }
 
 if __name__ == '__main__':
