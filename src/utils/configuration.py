@@ -207,6 +207,15 @@ class Configuration(metaclass=Singleton):
             self.put('prediction_verbose', temp)
             temp = reader['prediction'].get('model_path', 'best_model.pth')
             self.put('prediction_model_path', str(temp))
+            #explainability
+            temp = reader['explainability'].get('best_predictor_model_path', '')
+            self.put('best_predictor_model_path', str(temp))
+            temp = reader['explainability'].get('gradcam_input', '')
+            self.put('gradcam_input', str(temp))
+            temp = reader['explainability'].get('gradcam_output', '')
+            self.put('gradcam_output', str(temp))
+            temp = reader['explainability'].get('learning_rate', 1e-4)
+            self.put('explainability_learning_rate', float(temp))
 
         except Exception as s:
             print(s)
