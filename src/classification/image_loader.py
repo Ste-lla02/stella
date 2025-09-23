@@ -29,7 +29,8 @@ class Image_Loader(AbstractLoader):
                 if('label_segmentation' in masks[0].keys()):
                     masks_filtered=[mask for mask in masks if mask['label_segmentation']!=4.0]
                     if(len(masks_filtered)>0):
-                        overlay = self.manager.mask_cropping(image_name, masks_filtered, highlits=True)
+                        #overlay = self.manager.make_overall_image(image_name, masks_filtered, highlits=True)
+                        overlay=self.manager.mask_cropping(image_name,masks_filtered)
                         self.plot_overlay(overlay,image_name)
                         label_mask=self.code_csv[self.code_csv['Key']==image_name]['VUP'].values[0]
                         mask_pillow = cv2_to_pil(overlay)
