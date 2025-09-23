@@ -137,3 +137,50 @@ class State:
                 print('ERROR pickle ' + image_name + '\n')
                 print(str(e) + '\n')
 
+    def mask_cropping(self,image_name,masks):
+        """
+           Unisce tutte le maschere in 'masks' (campo 'segmentation' binario 0/1 o 0/255)
+           e mette a NERO tutto ciò che è fuori dall'unione. Restituisce un array OpenCV (H,W,3).
+           """
+        # Carica immagine base (PIL) e converti in OpenCV (BGR)
+        try:
+            base_image = self.get_original(image_name)
+        except KeyError:
+            base_image = Image.open(self.input_directory + os.sep + image_name + self.filetype)
+
+
+        base_img = pil_to_cv2(base_image)  # atteso BGR, dtype uint8
+        h, w = base_img.shape[:2]
+        result=base_img
+
+        # Costruisci maschera unione (H, W) binaria {0,1}
+        union_mask = np.zeros((h, w), dtype=np.uint8)
+        for m in masks:
+            seg = m['segmentation'].astype(np.uint8)
+            # Se la maschera non ha la stessa shape, ridimensionala in modo sicuro
+            if seg.shape != (h, w):
+                seg = cv2.resize(seg, (w, h), interpolation=cv2.INTER_NEAREST)
+            seg_bin = (seg > 0).astype(np.uint8)
+            union_mask = np.maximum(union_mask, seg_bin)
+
+        # Se l'immagine ha 3 canali, espandi la maschera; se 4, maschera solo i primi 3 canali
+        if base_img.ndim == 3:
+            if base_img.shape[2] == 3:
+                mask3 = np.repeat(union_mask[:, :, None], 3, axis=2)
+                result = base_img * mask3
+            elif base_img.shape[2] == 4:
+                # Mantieni il canale alpha come in input (opzionale: potresti azzerarlo fuori)
+                rgb = base_img[:, :, :3]
+                a = base_img[:, :, 3:]
+                mask3 = np.repeat(union_mask[:, :, None], 3, axis=2)
+                rgb_masked = rgb * mask3
+                result = np.concatenate([rgb_masked, a], axis=2)
+            else:
+                # Canale singolo/altro: fallback
+                result = base_img * union_mask
+        else:
+            # Grayscale
+            result = base_img * union_mask
+
+        return result
+
