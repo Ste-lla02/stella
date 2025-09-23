@@ -4,6 +4,7 @@ import cv2, numpy as np
 import pickle
 from src.utils.utils import cv2_to_pil, pil_to_cv2
 import glob
+from skimage.filters import threshold_otsu
 error_list=open('errors.txt','w')
 class State:
     def __init__(self, conf):
@@ -148,6 +149,8 @@ class State:
         except KeyError:
             base_image = Image.open(self.input_directory + os.sep + image_name + self.filetype)
 
+        self.postprocess_with_sam(base_image,masks)
+
 
         base_img = pil_to_cv2(base_image)  # atteso BGR, dtype uint8
         h, w = base_img.shape[:2]
@@ -183,4 +186,35 @@ class State:
             result = base_img * union_mask
 
         return result
+
+    def needs_inversion_on_mask(self,img_gray: np.ndarray, mask: np.ndarray, use_otsu: bool = False) -> bool:
+        m = mask.astype(bool)
+        if m.sum() == 0:
+            return False
+        # estrai solo i pixel dentro la mask
+        vals = img_gray[m]
+        if use_otsu:
+            thr = threshold_otsu(img_gray)
+        else:
+            thr = np.median(img_gray)
+
+        n_dark = int((vals < thr).sum())
+        n_light = int(vals.size - n_dark)
+        need_inversion = n_dark > n_light
+        return need_inversion
+
+    def inversion(self,img: np.ndarray) -> np.ndarray:
+        if img.dtype != np.uint8:
+            raise ValueError("Image must be dtype uint8 (0-255).")
+        # Inversione
+        img = 255 - img
+        return img
+
+    def postprocess_with_sam(self,base_image, masks):
+        base_img = np.array(base_image)  # da pil a numpy
+        base_img = cv2.cvtColor(base_img, cv2.COLOR_RGB2GRAY)
+        bladder_mask = next((m for m in masks if int(m['label_segmentation']) == 1), None)
+        if self.needs_inversion_on_mask(base_img, bladder_mask['segmentation'], use_otsu=False):
+            base_img = self.inversion(base_img)
+        return base_img
 
