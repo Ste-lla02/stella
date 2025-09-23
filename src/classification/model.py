@@ -56,7 +56,7 @@ class EarlyStopping:
     def _save_checkpoint(self, val, model, epoch, y_true, y_pred):
         if self.verbose:
             self.trace_func(f'Validation loss decreased. Saving model at epoch {epoch} ...')
-        self.best_model_wts = copy.deepcopy(model.state_dict())
+        self.best_model_wts =model.state_dict()
         self.best_epoch = epoch
         self.val_loss_min = val
         if self.path:

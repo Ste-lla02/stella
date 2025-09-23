@@ -18,12 +18,14 @@ class AbsDataset(Dataset):
         self.images = images
         self.labels = labels
 
+        self.mean,self.std= self.compute_mean_std()
+
         # 2) definisco il transform
         self.transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=1),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5], std=[0.5])
+            transforms.Normalize(mean=self.mean, std=self.std)
         ])
 
         self.images = [self.transform(img) for img in self.images]

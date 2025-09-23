@@ -26,9 +26,12 @@ class ResNet():
     def load(self) -> bool:
         retval = False
         try:
-            checkpoint = torch.load(self.path, map_location=self.device)
-            self.model.load_state_dict(checkpoint["model_state_dict"])
-            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            checkpoint = torch.load(self.path, weights_only=True)
+            self.model.load_state_dict(checkpoint)
+            self.model.eval()
+            #checkpoint = torch.load(self.path, map_location=self.device)
+            #self.model.load_state_dict(checkpoint["model_state_dict"])
+            #self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
             retval = True
         except Exception as e:
             print(e)
