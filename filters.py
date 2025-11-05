@@ -156,20 +156,21 @@ def preprocessing(img,filename,output_folder):
 if __name__ == "__main__":
     # Carica immagine
     folder = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/test/")
-    output_dir = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed_2/")
+    output_dir = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed/")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # lista di tutti i file .png
-    files = list(folder.glob("*.png"))
+    files = list(folder.glob("*.png"))  # Path objects
 
-    # se vuoi i path completi in stringa
-    files_name = [str(p) for p in files]
-    report=open('/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed_2/report.txt', 'w')
-    for f in files_name:
-        file_name = Path(f).stem
+    report = open(output_dir / 'report.txt', 'w')
+    for f in files:
+        file_name = f.stem
         report.write(f"Processing {file_name}\n")
-        img = load_image(f,gray=True)
-        preprocessing(img,file_name,output_dir)
+
+        img = load_image(str(f), gray=True)
+
+        # True se f NON è dentro output_dir
+        if not f.resolve().is_relative_to(output_dir.resolve()):
+            preprocessing(img, file_name, output_dir)
     report.close()
 
 
