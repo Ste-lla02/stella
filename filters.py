@@ -10,9 +10,33 @@ import cv2
 from pathlib import Path
 from skimage.restoration import denoise_nl_means, estimate_sigma
 from skimage.filters import threshold_otsu
+import matplotlib.patches as patches
 
 from skimage import io, color
 
+
+def rms_contrast(img):
+    """Calcola l'RMS contrast (deviazione standard normalizzata)."""
+    img = img.astype(np.float32)
+    return np.std(img) / np.mean(img)
+
+
+
+
+def combined_quality_metric(original, denoised, alpha=0.35):
+    # Calcolo PSNR (in dB)
+    psnr_val = psnr(original, denoised)
+
+    # Normalizziamo il PSNR su scala [0,1] assumendo 0–50 dB come range utile
+    psnr_norm = np.clip(psnr_val / 50.0, 0, 1)
+
+    # Calcolo contrasto normalizzato
+    contrast_val = rms_contrast(denoised)
+    contrast_norm = np.clip(contrast_val / 0.5, 0, 1)  # 0.5 ≈ contrasto alto tipico
+
+    # Media pesata
+    Q = alpha * psnr_norm + (1 - alpha) * contrast_norm
+    return Q
 def load_image(path, gray=False):
     img = io.imread(path)
 
@@ -41,44 +65,7 @@ def load_image(path, gray=False):
             return img[..., 0]
     raise ValueError(f"Formato immagine non supportato: shape={img.shape}")
 
-def conditional_inversion(image: np.ndarray) -> np.ndarray:
-    # Assicura che l'immagine sia 2D
-    if image.ndim == 3:
-        # Se RGB, converte in grigio
-        image = np.mean(image, axis=2)
 
-    img = image.copy()
-
-    # Se l'immagine è float [0,1], converti temporaneamente in [0,255] uint8 per Otsu
-    if img.dtype != np.uint8:
-        img_8bit = (img * 255).astype(np.uint8)
-    else:
-        img_8bit = img
-
-    vals = img_8bit.ravel()
-    if vals.size == 0:
-        return img  # immagine vuota, nessuna modifica
-
-    # Calcola soglia di Otsu
-    thr = threshold_otsu(img_8bit)
-    n_dark = (vals < thr).sum()
-    n_light = vals.size - n_dark
-
-    # Logica di inversione
-    need_inversion = n_dark < n_light  # se prevale il chiaro, inverti
-    if need_inversion:
-        if img_8bit.dtype == np.uint8:
-            inverted = 255 - img_8bit
-        else:
-            inverted = 1.0 - img  # nel caso di float [0,1]
-    else:
-        inverted = img_8bit
-
-    # Ritorna nello stesso formato d’ingresso
-    if image.dtype != np.uint8:
-        return inverted.astype(np.float32) / 255.0
-    else:
-        return inverted.astype(np.uint8)
 
 def filter_median(image, radius=2):
     """Filtro mediano per rumore impulsivo."""
@@ -97,7 +84,7 @@ def filter_wiener(image, balance=0.1):
 
 
 
-def evaluate_filter(original, denoised):
+def psnr(original, denoised):
     """Calcola solo PSNR per valutare la qualità del filtraggio."""
     psnr = metrics.peak_signal_noise_ratio(original, denoised)
     return psnr
@@ -120,14 +107,18 @@ def preprocessing(img,filename,output_folder):
     results = {}
     iteration_filter = filters.copy()
     for name, filtered_img in iteration_filter.items():
-        psnr = evaluate_filter(img, filtered_img)
-        results[name] = psnr
-        print(f"{name} filter -> PSNR: {psnr:.2f}")
+        metric = combined_quality_metric(img, filtered_img)
+        results[name] = metric
+        print(f"{name} filter -> metric: {metric:.2f}")
         filtered_img = (filtered_img * 255).astype(np.uint8)
         filtered_img = clahe.apply(filtered_img)
         filtered_img = filtered_img.astype(np.float32) / 255.0
-        #filtered_img=enhance_focus_suppress_background(filtered_img)
         filters[name + '+clahe'] = filtered_img
+        metric = combined_quality_metric(img, filtered_img)
+        results[name+'+clahe'] = metric
+    best = max(results.items(), key=lambda x: x[1])
+    report.write(f"\nMiglior filtro secondo metric: {best[0]} (metric={best[1]:.2f})\n")
+    best_image_name=best[0]
 
     # Mostra risultati visivi
     fig, axes = plt.subplots(1, len(filters) + 1, figsize=(15, 5))
@@ -137,8 +128,23 @@ def preprocessing(img,filename,output_folder):
     ax[0].set_title("Immagine con rumore")
 
     for i, (name, filtered_img) in enumerate(filters.items(), start=1):
+
         ax[i].imshow(filtered_img, cmap='gray')
         ax[i].set_title(name)
+        if name==best_image_name:
+            h, w = filtered_img.shape[:2]
+
+            # Crea un rettangolo verde attorno all'immagine
+            rect = patches.Rectangle(
+                (0, 0),  # coordinate angolo in basso a sinistra
+                w, h,  # larghezza e altezza
+                linewidth=2,  # spessore bordo
+                edgecolor='lime',  # colore bordo (verde acceso)
+                facecolor='none'  # nessun riempimento
+            )
+
+            # Aggiungi il rettangolo all’asse
+            ax[i].add_patch(rect)
 
     for a in ax:
         a.axis('off')
@@ -150,8 +156,9 @@ def preprocessing(img,filename,output_folder):
     plt.close(fig)
 
     # Mostra il miglior filtro in base al PSNR
-    best = max(results.items(), key=lambda x: x[1])
-    report.write(f"\nMiglior filtro secondo PSNR: {best[0]} (PSNR={best[1]:.2f})\n")
+
+
+
 
 
 
@@ -159,7 +166,7 @@ def preprocessing(img,filename,output_folder):
 if __name__ == "__main__":
     # Carica immagine
     folder = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/test/")
-    output_dir = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed/")
+    output_dir = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed_selection/")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     files = list(folder.glob("*.png"))  # Path objects
