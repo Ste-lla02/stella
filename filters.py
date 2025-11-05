@@ -120,10 +120,10 @@ def preprocessing(img,filename,output_folder):
         psnr = evaluate_filter(img, filtered_img)
         results[name] = psnr
         print(f"{name} filter -> PSNR: {psnr:.2f}")
-        #filtered_img = (filtered_img * 255).astype(np.uint8)
-        #filtered_img = clahe.apply(filtered_img)
-        #filtered_img = filtered_img.astype(np.float32) / 255.0
-        filtered_img=enhance_focus_suppress_background(filtered_img)
+        filtered_img = (filtered_img * 255).astype(np.uint8)
+        filtered_img = clahe.apply(filtered_img)
+        filtered_img = filtered_img.astype(np.float32) / 255.0
+        #filtered_img=enhance_focus_suppress_background(filtered_img)
         filters[name + '+clahe'] = filtered_img
 
     # Mostra risultati visivi
