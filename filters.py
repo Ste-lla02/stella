@@ -1,3 +1,4 @@
+import PIL
 import matplotlib.pyplot as plt
 from skimage import color, io, util, metrics, restoration
 from skimage.filters import median
@@ -8,6 +9,7 @@ import numpy as np
 import cv2
 from pathlib import Path
 from skimage.restoration import denoise_nl_means, estimate_sigma
+from skimage.filters import threshold_otsu
 
 from skimage import io, color
 
@@ -38,44 +40,45 @@ def load_image(path, gray=False):
         if c == 2:       # L + alpha → prendi solo la luminanza
             return img[..., 0]
     raise ValueError(f"Formato immagine non supportato: shape={img.shape}")
-import numpy as np
-import matplotlib.pyplot as plt
-from skimage import io, exposure, filters, util
-from skimage.color import rgb2gray
-from skimage.restoration import denoise_bilateral
 
-def enhance_focus_suppress_background(img, clip_limit=0.03, tile_grid_size=(8,8),
-                                      highpass_radius=15, strength=1.5):
-    # Assumiamo img in scala di grigi o normalizzata 0-1
-    if img.ndim == 3:
-        img_gray = rgb2gray(img)
+def conditional_inversion(image: np.ndarray) -> np.ndarray:
+    # Assicura che l'immagine sia 2D
+    if image.ndim == 3:
+        # Se RGB, converte in grigio
+        image = np.mean(image, axis=2)
+
+    img = image.copy()
+
+    # Se l'immagine è float [0,1], converti temporaneamente in [0,255] uint8 per Otsu
+    if img.dtype != np.uint8:
+        img_8bit = (img * 255).astype(np.uint8)
     else:
-        img_gray = img
+        img_8bit = img
 
-    # Step 1: rimuovi rumore/sfondo leggero (optional)
-    img_smooth = denoise_bilateral(img_gray, sigma_color=0.05, sigma_spatial=15)
+    vals = img_8bit.ravel()
+    if vals.size == 0:
+        return img  # immagine vuota, nessuna modifica
 
-    # Step 2: Equalizzazione locale (CLAHE)
-    img_clahe = exposure.equalize_adapthist(img_smooth, clip_limit=clip_limit, nbins=256,
-                                             kernel_size=tile_grid_size)
+    # Calcola soglia di Otsu
+    thr = threshold_otsu(img_8bit)
+    n_dark = (vals < thr).sum()
+    n_light = vals.size - n_dark
 
-    # Step 3: Filtraggio high-pass per evidenziare dettagli
-    # Metodo: originale − versione blur/low-pass
-    img_low = filters.gaussian(img_clahe, sigma=highpass_radius)
-    img_hp = img_clahe - img_low
-    # Aumenta l’effetto
-    img_hp_enh = img_clahe + strength * img_hp
+    # Logica di inversione
+    need_inversion = n_dark < n_light  # se prevale il chiaro, inverti
+    if need_inversion:
+        if img_8bit.dtype == np.uint8:
+            inverted = 255 - img_8bit
+        else:
+            inverted = 1.0 - img  # nel caso di float [0,1]
+    else:
+        inverted = img_8bit
 
-    # Step 4: Normalizzazione finale
-    #img_out = util.img_as_float(img_hp_enh)
-    #img_out = (img_out - img_out.min()) / (img_out.max() - img_out.min())
-
-    sigma = estimate_sigma(img_hp_enh, channel_axis=None)
-    img_hp_enh = denoise_nl_means(img_hp_enh, h=1.15 * sigma, fast_mode=True)
-    return img_hp_enh
-
-
-
+    # Ritorna nello stesso formato d’ingresso
+    if image.dtype != np.uint8:
+        return inverted.astype(np.float32) / 255.0
+    else:
+        return inverted.astype(np.uint8)
 
 def filter_median(image, radius=2):
     """Filtro mediano per rumore impulsivo."""
