@@ -30,7 +30,8 @@ class Segmenter:
             stability_score_thresh=min_mask_stability,
             crop_n_layers=layers,
             crop_n_points_downscale_factor=crop_n_points_downscale_factor,
-            min_mask_region_area=min_mask_region_area
+            min_mask_region_area=min_mask_region_area,
+
         )
 
     def mask_generation(self, image, name, channel):

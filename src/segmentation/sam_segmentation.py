@@ -24,7 +24,8 @@ class Segmenter:
         sam = sam_model_registry[sam_kind](checkpoint=None)
 
         # Carica il checkpoint manualmente con weights_only=False
-        state_dict = torch.load(model_path, weights_only=False)
+        device = torch.device(sam_platform)
+        state_dict = torch.load(model_path, map_location=device, weights_only=False)
 
         # Carica i pesi nel modello
         sam.load_state_dict(state_dict)

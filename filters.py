@@ -21,21 +21,40 @@ def rms_contrast(img):
     return np.std(img) / np.mean(img)
 
 
+def image_quality_index(original, enanched):
+    mu_x = np.mean(original)
+    mu_y = np.mean(enanched)
+    sigma_x = np.var(original)
+    sigma_y = np.var(enanched)
+    sigma_xy = np.mean((original - mu_x) * (enanched - mu_y))
+
+    numerator = 4 * sigma_xy * mu_x * mu_y
+    denominator = (mu_x**2 + mu_y**2) * (sigma_x + sigma_y)
+
+    return numerator / denominator
 
 
-def combined_quality_metric(original, denoised, alpha=0.35):
+
+
+#buono alpha=0.15,beta=0.65,gamma=0.20
+def combined_quality_metric(original, denoised, alpha=0.15,beta=0.65,gamma=0.20):
     # Calcolo PSNR (in dB)
     psnr_val = psnr(original, denoised)
 
-    # Normalizziamo il PSNR su scala [0,1] assumendo 0–50 dB come range utile
-    psnr_norm = np.clip(psnr_val / 50.0, 0, 1)
+    # Normalizziamo il PSNR su scala [0,1] assumendo 0–100 dB come range utile
+    psnr_norm = np.clip(psnr_val / 100.0, 0, 1)
+
 
     # Calcolo contrasto normalizzato
     contrast_val = rms_contrast(denoised)
-    contrast_norm = np.clip(contrast_val / 0.5, 0, 1)  # 0.5 ≈ contrasto alto tipico
+    #contrast_norm = np.clip(contrast_val / 0.3, 0, 1)  # 0.5 ≈ contrasto alto tipico
+
+    #calcolo IQI
+    IQI = image_quality_index(original, denoised)
+    #IQI_norm = (IQI + 1) / 2.0
 
     # Media pesata
-    Q = alpha * psnr_norm + (1 - alpha) * contrast_norm
+    Q = alpha * psnr_norm + beta * contrast_val + gamma * IQI
     return Q
 def load_image(path, gray=False):
     img = io.imread(path)
@@ -89,7 +108,7 @@ def psnr(original, denoised):
     psnr = metrics.peak_signal_noise_ratio(original, denoised)
     return psnr
 
-def preprocessing(img,filename,output_folder):
+def preprocessing(img,filename,output_folder,folder_preprocessed):
 
     # Aggiunge rumore (attivalo se vuoi testare la rimozione del rumore)
     # noisy = add_salt_pepper_noise(img, amount=0.1)
@@ -106,19 +125,35 @@ def preprocessing(img,filename,output_folder):
     # Valuta ciascun filtro
     results = {}
     iteration_filter = filters.copy()
+    print('Image '+str(filename)+'\n')
     for name, filtered_img in iteration_filter.items():
+        #FILTRO
         metric = combined_quality_metric(img, filtered_img)
         results[name] = metric
         print(f"{name} filter -> metric: {metric:.2f}")
-        filtered_img = (filtered_img * 255).astype(np.uint8)
-        filtered_img = clahe.apply(filtered_img)
-        filtered_img = filtered_img.astype(np.float32) / 255.0
-        filters[name + '+clahe'] = filtered_img
-        metric = combined_quality_metric(img, filtered_img)
+        #CLAHE
+        filtered_clahe = (filtered_img * 255).astype(np.uint8)
+        filtered_clahe = clahe.apply(filtered_clahe)
+        filtered_clahe = filtered_clahe.astype(np.float32) / 255.0
+        filters[name + '+clahe'] = filtered_clahe
+        metric = combined_quality_metric(img, filtered_clahe)
         results[name+'+clahe'] = metric
+        print(f"{name+'+clahe'} filter -> metric: {metric:.2f}")
+        #HE
+        filtered_he = (filtered_img * 255).astype(np.uint8)
+        filtered_he = cv2.equalizeHist(filtered_he)
+        filtered_he = filtered_he.astype(np.float32) / 255.0
+        filters[name + '+he'] = filtered_he
+        metric = combined_quality_metric(img, filtered_he)
+        results[name + '+he'] = metric
+        print(f"{name + '+he'} filter -> metric: {metric:.2f}")
     best = max(results.items(), key=lambda x: x[1])
-    report.write(f"\nMiglior filtro secondo metric: {best[0]} (metric={best[1]:.2f})\n")
+    #report.write(f"\nMiglior filtro secondo metric: {best[0]} (metric={best[1]:.2f})\n")
     best_image_name=best[0]
+    flag=False
+    if(psnr(img,filters[best[0]])<0.55):
+        filters[best[0]]=filter_bilateral(filters[best[0]])
+        flag=True
 
     # Mostra risultati visivi
     fig, axes = plt.subplots(1, len(filters) + 1, figsize=(15, 5))
@@ -130,8 +165,9 @@ def preprocessing(img,filename,output_folder):
     for i, (name, filtered_img) in enumerate(filters.items(), start=1):
 
         ax[i].imshow(filtered_img, cmap='gray')
-        ax[i].set_title(name)
         if name==best_image_name:
+            if(flag):
+                name=name+' improved'
             h, w = filtered_img.shape[:2]
 
             # Crea un rettangolo verde attorno all'immagine
@@ -145,6 +181,7 @@ def preprocessing(img,filename,output_folder):
 
             # Aggiungi il rettangolo all’asse
             ax[i].add_patch(rect)
+        ax[i].set_title(name)
 
     for a in ax:
         a.axis('off')
@@ -154,8 +191,11 @@ def preprocessing(img,filename,output_folder):
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
+    best_img = filters[best[0]]
+    save_path_best = output_dir_preprocessed / f"{filename}.png"
+    plt.imsave(save_path_best, best_img, cmap='gray')
+    plt.close(fig)
 
-    # Mostra il miglior filtro in base al PSNR
 
 
 
@@ -168,19 +208,21 @@ if __name__ == "__main__":
     folder = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/test/")
     output_dir = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed_selection/")
     output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir_preprocessed = Path("/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed_selected/")
+    output_dir_preprocessed.mkdir(parents=True, exist_ok=True)
 
     files = list(folder.glob("*.png"))  # Path objects
-
-    report = open(output_dir / 'report.txt', 'w')
     for f in files:
+
         file_name = f.stem
-        report.write(f"Processing {file_name}\n")
+        #if(file_name.startswith("ID_168")):
+
 
         img = load_image(str(f), gray=True)
 
-        # True se f NON è dentro output_dir
+                # True se f NON è dentro output_dir
         if not f.resolve().is_relative_to(output_dir.resolve()):
-            preprocessing(img, file_name, output_dir)
-    report.close()
+            preprocessing(img, file_name, output_dir,output_dir_preprocessed)
+
 
 

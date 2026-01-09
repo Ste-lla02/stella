@@ -6,6 +6,7 @@ from src.utils.utils import cv2_to_pil, pil_to_cv2
 import glob
 from skimage.filters import threshold_otsu
 error_list=open('errors.txt','w')
+from matplotlib import pyplot as plt
 class State:
     def __init__(self, conf):
         self.input_directory = conf.get('srcfolder')
@@ -94,8 +95,19 @@ class State:
     def add_mask(self, image_name, mask):
         self.images[image_name]['masks'].append(mask)
         filename = f"{image_name}_mask_{mask['id']}.png"
-        mask_pillow = cv2_to_pil(mask['segmentation'])
-        self.save_image_and_log(mask_pillow, self.mask_directory, filename)
+        #ripristina rigo 98 -100 cancella 101 e 108 per stampare solo la mask e non l'overlay
+        #mask_pillow = cv2_to_pil(mask['segmentation'])
+        #mask_pillow = mask['segmentation']
+        #self.save_image_and_log(mask_pillow, self.mask_directory, filename)
+        mask_pillow=self.make_overall_image(image_name,[mask])
+        fig = plt.figure()
+        plt.axis('off')
+        plt.imshow(mask_pillow)
+        plt.savefig(self.mask_directory+'/'+filename, format='png',
+                    dpi=600, bbox_inches='tight', pad_inches=0, transparent=True)
+        plt.close(fig)
+        #
+
 
     def add_masks(self, image_name, masks):
         for mask in masks:

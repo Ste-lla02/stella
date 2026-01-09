@@ -14,6 +14,7 @@ from src.classification.ResNet import ResNet
 import torch
 import cv2
 from src.labelling.db_extraction import Dobby_db
+from PIL import Image
 
 
 '''def build(conf: Configuration):
@@ -48,40 +49,43 @@ from src.labelling.db_extraction import Dobby_db
 
 def build(conf: Configuration):
     # Starting
+    testing=['ID_168']
     images = State(configuration)
     topic = conf.get('ntfy_topic')
     preprocessor = Preprocessor(conf)
     for image_filename in images.get_base_images():
         image_name = os.path.basename(image_filename).split('.')[0]
-        if not images.check_pickle(image_name):
-            attempt = 2
-            while attempt > 0:
-                image = images.get_original(image_name)
-                try:
-                    # Preprocessing
-                    faint_image = preprocessor.execute(image)
-                    images.add_preprocessed(image_name, faint_image)
-                    # Segmentation
-                    segmenter = Segmenter()
-                    f = MaskFeaturing()
-                    masks = segmenter.mask_generation(faint_image)
-                    # Filtering
-                    masks = list(filter(lambda x: f.filter(x), masks))
-                    images.add_masks(image_name, masks)
-                    # Serializing
-                    images.save_pickle(image_name)
-                except Exception as e:
-                    if attempt > 0:
-                        if type(e) == cv2.error:
-                            send_ntfy_warning(topic, image_name, str(e))
-                            image = image.convert("RGB")
-                            images.set_original(image_name, image)
-                        else:
-                            send_ntfy_error(topic, image_name, str(e))
-                finally:
-                    attempt -= 1
-                    if attempt == 0:
-                        images.remove(image_name)
+        if image_name in testing:
+            if not images.check_pickle(image_name):
+                attempt = 2
+                while attempt > 0:
+                    image = images.get_original(image_name)
+                    try:
+                        # Preprocessing ripristina
+                        #faint_image = preprocessor.execute(image)
+                        #images.add_preprocessed(image_name, faint_image)
+                        # Segmentation
+                        faint_image = Image.open('/Users/greeny/Desktop/Sud4VUP/input/img_SUD4VUP_complete/preprocessed_selected/'+image_name+'.png')
+                        segmenter = Segmenter()
+                        f = MaskFeaturing()
+                        masks = segmenter.mask_generation(faint_image)
+                        # Filtering
+                        masks = list(filter(lambda x: f.filter(x), masks))
+                        images.add_masks(image_name, masks)
+                        # Serializing
+                        images.save_pickle(image_name)
+                    except Exception as e:
+                        if attempt > 0:
+                            if type(e) == cv2.error:
+                                send_ntfy_warning(topic, image_name, str(e))
+                                image = image.convert("RGB")
+                                images.set_original(image_name, image)
+                            else:
+                                send_ntfy_error(topic, image_name, str(e))
+                    finally:
+                        attempt -= 1
+                        if attempt == 0:
+                            images.remove(image_name)
     send_ntfy_notification(topic)
 
 
