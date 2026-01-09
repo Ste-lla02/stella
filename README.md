@@ -241,7 +241,7 @@ Generates augmented data, trains the classifier, and writes reports to `experime
 python3 main.py configuration.ini prediction
 ```
 
-Generates augmented data, trains the classifier, and writes reports to `experiments/output/`.
+Classifies masked images to predict unhealthy patients, writes reports to `experiments/output/`.
 
 ---
 ## 🧪 Reproducing the paper
