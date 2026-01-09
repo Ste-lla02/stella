@@ -210,7 +210,7 @@ Key sections you may want to edit:
 ### 1) Preprocess & generate masks (SAM2)
 
 ```bash
-python3 main.py configuration.ini classification
+python3 main.py configuration.ini build
 ```
 
 This will run preprocessing and segmentation according to your config and save masks into `experiments/img/masks/`.
@@ -235,6 +235,15 @@ Generates augmented data, trains the classifier, and writes reports to `experime
 
 ---
 
+### 4) Prediction (PUV/NoPUV)
+
+```bash
+python3 main.py configuration.ini prediction
+```
+
+Generates augmented data, trains the classifier, and writes reports to `experiments/output/`.
+
+---
 ## 🧪 Reproducing the paper
 
 This repository accompanies the paper:
