@@ -63,6 +63,8 @@ class Configuration(metaclass=Singleton):
             # Main
             temp = reader['main'].get('srcfolder',None)
             self.put('srcfolder', temp)
+            temp = reader['main'].get('preprocessedselection', 1)
+            self.put('preprocessed_selection', temp)
             temp = reader['main'].get('preprocessedfolder',1)
             self.put('preprocessedfolder', temp)
             temp = reader['main'].get('maskfolder',1)
